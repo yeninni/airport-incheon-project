@@ -812,7 +812,7 @@
         </div>
       </div>
       <div class="parking-zones" id="parkingZoneFeed">
-        <div class="empty-state">백엔드가 연결되면 실시간 주차 혼잡 구역이 여기에 표시됩니다.</div>
+        <div class="empty-state">주차 운영 현황을 불러오는 중입니다.</div>
       </div>
     </section>
 
@@ -1097,12 +1097,60 @@ let movingMarker = null;
 let playbackTimer = null;
 let parkingSnapshot = null;
 let parkingRefreshTimer = null;
+let mockTrafficMarkers = [];
+let mockTrafficTimer = null;
 
 let currentRecords = [];
 let currentAnalysis = null;
 let selectedVehicleId = null;
 const PARKING_REFRESH_MS = 30000;
 const appConfig = window.AIRWATCH_CONFIG || {};
+const mockTrafficRoutes = [
+  {
+    id: 'patrol-t1',
+    label: 'T1 curbside 순찰',
+    emoji: '🚗',
+    color: '#d94960',
+    points: [
+      [37.4484, 126.4480],
+      [37.4490, 126.4488],
+      [37.4496, 126.4497],
+      [37.4498, 126.4507],
+      [37.4494, 126.4518],
+      [37.4488, 126.4510]
+    ],
+    step: 0.018
+  },
+  {
+    id: 'patrol-t2',
+    label: 'T2 접근로 순찰',
+    emoji: '🚙',
+    color: '#c48a14',
+    points: [
+      [37.4465, 126.4510],
+      [37.4469, 126.4520],
+      [37.4472, 126.4532],
+      [37.4474, 126.4544],
+      [37.4471, 126.4552],
+      [37.4467, 126.4541]
+    ],
+    step: 0.022
+  },
+  {
+    id: 'official-loop',
+    label: '공식 인계장 이동',
+    emoji: '🚘',
+    color: '#1772cf',
+    points: [
+      [37.4468, 126.4472],
+      [37.4474, 126.4478],
+      [37.4478, 126.4483],
+      [37.4473, 126.4480],
+      [37.4469, 126.4474]
+    ],
+    step: 0.026
+  }
+];
 
 const sampleRecords = [
   ['VAL-101', '2026-04-03T08:00:00', 37.4469, 126.4469, 31],
@@ -1291,6 +1339,100 @@ function parkingSeverityClass(rate) {
   return 'low';
 }
 
+function interpolatePoint(start, end, t) {
+  return [
+    start[0] + (end[0] - start[0]) * t,
+    start[1] + (end[1] - start[1]) * t
+  ];
+}
+
+function getMockTrafficPosition(route, elapsed) {
+  const segmentFloat = elapsed * route.step;
+  const segmentIndex = Math.floor(segmentFloat) % route.points.length;
+  const nextIndex = (segmentIndex + 1) % route.points.length;
+  const segmentProgress = segmentFloat % 1;
+  return interpolatePoint(route.points[segmentIndex], route.points[nextIndex], segmentProgress);
+}
+
+function createTrafficIcon(route) {
+  return L.divIcon({
+    className: '',
+    html: `<div style="
+      width:32px;
+      height:32px;
+      border-radius:50%;
+      background:rgba(255,255,255,0.92);
+      border:2px solid ${route.color};
+      box-shadow:0 12px 22px rgba(22,61,102,0.18);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:16px;
+    ">${route.emoji}</div>`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16]
+  });
+}
+
+function initMockTraffic() {
+  if (mockTrafficMarkers.length) return;
+
+  mockTrafficMarkers = mockTrafficRoutes.map((route, index) => {
+    const position = getMockTrafficPosition(route, index * 8);
+    const marker = L.marker(position, { icon: createTrafficIcon(route), zIndexOffset: 600 }).addTo(map);
+    marker.bindTooltip(route.label, { direction: 'top', offset: [0, -12] });
+    return { route, marker, elapsed: index * 8 };
+  });
+
+  mockTrafficTimer = setInterval(() => {
+    mockTrafficMarkers.forEach((entry) => {
+      entry.elapsed += 1;
+      entry.marker.setLatLng(getMockTrafficPosition(entry.route, entry.elapsed));
+    });
+  }, 900);
+}
+
+function buildMockParkingSnapshot() {
+  const now = new Date();
+  const minute = now.getMinutes();
+  const baseRate = 72 + Math.sin(minute / 7) * 6;
+  const hotspotCycle = minute % 3;
+  const hotspotNames = [
+    'T1 단기주차장 지하1층',
+    'T1 장기 P1 주차타워',
+    'T2 단기주차장 지상2층'
+  ];
+  const areas = [
+    { name: 'T1 단기주차장 지하1층', capacity: 378, occupancyRate: 91 + (minute % 4), available: 28 },
+    { name: 'T1 장기 P1 주차타워', capacity: 1379, occupancyRate: 96 + ((minute + 1) % 3), available: 14 },
+    { name: 'T2 단기주차장 지상2층', capacity: 947, occupancyRate: 88 + ((minute + 2) % 4), available: 52 },
+    { name: 'T2 예약 주차장', capacity: 3779, occupancyRate: 61 + ((minute + 1) % 5), available: 1468 }
+  ].map((area) => ({
+    ...area,
+    occupied: Math.round(area.capacity * (area.occupancyRate / 100)),
+    severity: area.occupancyRate >= 95 ? 'critical' : area.occupancyRate >= 85 ? 'high' : 'medium'
+  }));
+
+  const totalCapacity = areas.reduce((sum, area) => sum + area.capacity, 0) + 25000;
+  const totalOccupied = Math.round(totalCapacity * (baseRate / 100));
+
+  return {
+    status: 'mock',
+    fetchedAt: now.toISOString(),
+    sourceUpdatedAt: now.toISOString(),
+    summary: {
+      totalOccupied,
+      totalCapacity,
+      totalAvailable: totalCapacity - totalOccupied,
+      occupancyRate: Number(baseRate.toFixed(1)),
+      hotspot: hotspotNames[hotspotCycle],
+      hotspotRate: areas[hotspotCycle].occupancyRate,
+      congestedZones: 3
+    },
+    areas
+  };
+}
+
 function syncLiveStatus() {
   const liveStatus = document.getElementById('liveStatus');
   const parkingLinkState = document.getElementById('parkingLinkState');
@@ -1309,9 +1451,14 @@ function syncLiveStatus() {
     parkingLinkState.textContent = '주차 연동 실패';
     return;
   }
+  if (parkingSnapshot?.status === 'mock') {
+    liveStatus.textContent = currentAnalysis ? 'Live Preview + Analyzed' : 'Live Preview';
+    parkingLinkState.textContent = `실시간 관제 프리뷰 · ${formatPercent(parkingSnapshot.summary.occupancyRate)}`;
+    return;
+  }
   if (parkingSnapshot?.status === 'disabled') {
-    liveStatus.textContent = currentAnalysis ? 'Analyzed' : 'Demo Ready';
-    parkingLinkState.textContent = '주차 연동 예정';
+    liveStatus.textContent = currentAnalysis ? 'Analyzed' : 'Preview Ready';
+    parkingLinkState.textContent = '운영 프리뷰';
     return;
   }
   liveStatus.textContent = currentAnalysis ? 'Analyzed' : 'Standby';
@@ -1321,12 +1468,14 @@ function syncLiveStatus() {
 function renderStatusBanner(message) {
   const suffix = parkingSnapshot?.status === 'ok'
     ? ` 실시간 주차 점유율 ${formatPercent(parkingSnapshot.summary.occupancyRate)}, 혼잡 구역 ${parkingSnapshot.summary.hotspot || '없음'}.`
+    : parkingSnapshot?.status === 'mock'
+      ? ` 현재 혼잡 구역은 ${parkingSnapshot.summary.hotspot || '없음'}이며 점유율은 ${formatPercent(parkingSnapshot.summary.occupancyRate)}입니다.`
     : parkingSnapshot?.status === 'stale'
       ? ' 주차 데이터는 마지막 성공 응답 기준으로 유지 중입니다.'
       : parkingSnapshot?.status === 'error'
         ? ' 실시간 주차 API 연동은 아직 실패 상태입니다.'
         : parkingSnapshot?.status === 'disabled'
-          ? ' GitHub Pages 데모에서는 실시간 주차 API 대신 관제 UI 중심으로 표시됩니다.'
+          ? ' 주차 운영 현황 준비 중입니다.'
         : '';
   document.getElementById('statusBanner').textContent = `${message}${suffix}`;
 }
@@ -1682,16 +1831,40 @@ function renderParkingSnapshot(snapshot) {
   const meterFill = document.getElementById('parkingMeterFill');
   const feed = document.getElementById('parkingZoneFeed');
 
+  if (snapshot?.status === 'mock') {
+    parkingSnapshot = snapshot;
+    const severity = parkingSeverityClass(snapshot.summary.occupancyRate);
+    stateEl.textContent = '프리뷰';
+    rateEl.textContent = formatPercent(snapshot.summary.occupancyRate);
+    availableEl.textContent = `${formatCount(snapshot.summary.totalAvailable)}면`;
+    hotspotEl.textContent = snapshot.summary.hotspot || '-';
+    updatedEl.textContent = formatLiveTime(snapshot.fetchedAt);
+    meterFill.style.width = `${Math.min(snapshot.summary.occupancyRate, 100)}%`;
+    meterFill.className = `parking-meter-fill ${severity === 'low' ? '' : severity}`.trim();
+    feed.innerHTML = snapshot.areas.map((area) => `
+      <div class="parking-zone-item">
+        <div>
+          <div class="parking-zone-name">${area.name}</div>
+          <div>${formatCount(area.available)}면 여유 / 총 ${formatCount(area.capacity)}면</div>
+        </div>
+        <div class="parking-zone-rate">${formatPercent(area.occupancyRate)}</div>
+      </div>
+    `).join('');
+    renderRecommendations(currentAnalysis);
+    syncLiveStatus();
+    return;
+  }
+
   if (snapshot?.status === 'disabled') {
     parkingSnapshot = snapshot;
-    stateEl.textContent = '예정';
-    rateEl.textContent = '연동 대기';
+    stateEl.textContent = '프리뷰';
+    rateEl.textContent = '준비 중';
     availableEl.textContent = '-';
-    hotspotEl.textContent = '관제 UI 데모';
+    hotspotEl.textContent = '운영 프리뷰';
     updatedEl.textContent = '-';
     meterFill.style.width = '0%';
     meterFill.className = 'parking-meter-fill';
-    feed.innerHTML = '<div class="empty-state">현재 GitHub Pages 데모는 실시간 API 없이 동작합니다. 백엔드 URL을 연결하면 주차 혼잡 정보도 함께 표시됩니다.</div>';
+    feed.innerHTML = '<div class="empty-state">주차 운영 현황을 준비 중입니다.</div>';
     syncLiveStatus();
     return;
   }
@@ -1737,7 +1910,7 @@ function renderParkingSnapshot(snapshot) {
 
 async function refreshParkingSnapshot() {
   if (window.location.hostname.endsWith('github.io') && !hasConfiguredExternalApi()) {
-    renderParkingSnapshot({ status: 'disabled' });
+    renderParkingSnapshot(buildMockParkingSnapshot());
     if (!currentAnalysis) {
       renderStatusBanner('샘플 데이터를 불러오면 합법 주차대행 동선과 비인가 접촉 차량을 바로 비교할 수 있습니다.');
     }
@@ -2012,6 +2185,7 @@ document.getElementById('fitRouteBtn').addEventListener('click', () => {
 });
 
 resetDashboard();
+initMockTraffic();
 refreshParkingSnapshot();
 parkingRefreshTimer = setInterval(refreshParkingSnapshot, PARKING_REFRESH_MS);
 </script>
