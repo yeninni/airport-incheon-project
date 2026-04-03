@@ -1280,6 +1280,11 @@ function buildApiUrl(path) {
   return `${getApiBaseUrl()}${path}`;
 }
 
+function hasConfiguredExternalApi() {
+  const query = new URLSearchParams(window.location.search);
+  return Boolean(query.get('apiBase') || appConfig.API_BASE_URL);
+}
+
 function parkingSeverityClass(rate) {
   if (rate >= 85) return 'high';
   if (rate >= 70) return 'medium';
@@ -1304,6 +1309,11 @@ function syncLiveStatus() {
     parkingLinkState.textContent = '주차 연동 실패';
     return;
   }
+  if (parkingSnapshot?.status === 'disabled') {
+    liveStatus.textContent = currentAnalysis ? 'Analyzed' : 'Demo Ready';
+    parkingLinkState.textContent = '주차 연동 예정';
+    return;
+  }
   liveStatus.textContent = currentAnalysis ? 'Analyzed' : 'Standby';
   parkingLinkState.textContent = '주차 연동 대기';
 }
@@ -1315,6 +1325,8 @@ function renderStatusBanner(message) {
       ? ' 주차 데이터는 마지막 성공 응답 기준으로 유지 중입니다.'
       : parkingSnapshot?.status === 'error'
         ? ' 실시간 주차 API 연동은 아직 실패 상태입니다.'
+        : parkingSnapshot?.status === 'disabled'
+          ? ' GitHub Pages 데모에서는 실시간 주차 API 대신 관제 UI 중심으로 표시됩니다.'
         : '';
   document.getElementById('statusBanner').textContent = `${message}${suffix}`;
 }
@@ -1670,6 +1682,20 @@ function renderParkingSnapshot(snapshot) {
   const meterFill = document.getElementById('parkingMeterFill');
   const feed = document.getElementById('parkingZoneFeed');
 
+  if (snapshot?.status === 'disabled') {
+    parkingSnapshot = snapshot;
+    stateEl.textContent = '예정';
+    rateEl.textContent = '연동 대기';
+    availableEl.textContent = '-';
+    hotspotEl.textContent = '관제 UI 데모';
+    updatedEl.textContent = '-';
+    meterFill.style.width = '0%';
+    meterFill.className = 'parking-meter-fill';
+    feed.innerHTML = '<div class="empty-state">현재 GitHub Pages 데모는 실시간 API 없이 동작합니다. 백엔드 URL을 연결하면 주차 혼잡 정보도 함께 표시됩니다.</div>';
+    syncLiveStatus();
+    return;
+  }
+
   if (!snapshot || !snapshot.summary) {
     stateEl.textContent = '대기 중';
     rateEl.textContent = '-';
@@ -1710,6 +1736,14 @@ function renderParkingSnapshot(snapshot) {
 }
 
 async function refreshParkingSnapshot() {
+  if (window.location.hostname.endsWith('github.io') && !hasConfiguredExternalApi()) {
+    renderParkingSnapshot({ status: 'disabled' });
+    if (!currentAnalysis) {
+      renderStatusBanner('샘플 데이터를 불러오면 합법 주차대행 동선과 비인가 접촉 차량을 바로 비교할 수 있습니다.');
+    }
+    return;
+  }
+
   try {
     const response = await fetch(buildApiUrl('/api/parking/live'), {
       headers: { 'Accept': 'application/json' },
