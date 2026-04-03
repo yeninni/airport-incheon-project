@@ -354,36 +354,36 @@
   .summary-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 14px;
-    padding: 0 24px 18px;
+    gap: 10px;
+    padding: 0 24px 14px;
   }
 
   .summary-card {
     background: var(--panel-strong);
     border: 1px solid rgba(199, 220, 238, 0.95);
-    border-radius: 20px;
-    padding: 16px 18px;
+    border-radius: 18px;
+    padding: 13px 15px;
     box-shadow: var(--shadow);
   }
 
   .summary-card .small {
-    font-size: 11px;
+    font-size: 10px;
     letter-spacing: 1.2px;
     text-transform: uppercase;
     color: var(--text-dim);
-    margin-bottom: 8px;
+    margin-bottom: 6px;
   }
 
   .summary-card .value {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 28px;
+    font-size: clamp(22px, 2vw, 30px);
     color: var(--text);
-    line-height: 1;
+    line-height: 1.05;
   }
 
   .summary-card .sub {
-    margin-top: 9px;
-    font-size: 12px;
+    margin-top: 7px;
+    font-size: 11px;
     color: var(--text-soft);
     line-height: 1.5;
   }
@@ -394,6 +394,11 @@
 
   .summary-card.zone .value {
     color: var(--blue);
+  }
+
+  .summary-card.clock .value {
+    color: var(--navy);
+    letter-spacing: -0.04em;
   }
 
   .content-grid {
@@ -878,10 +883,10 @@
         <div class="value" id="sumRisks">0</div>
         <div class="sub" id="sumRisksSub">위험 판단 대기</div>
       </article>
-      <article class="summary-card zone">
-        <div class="small">집중 감시 구역</div>
-        <div class="value" id="sumZone">-</div>
-        <div class="sub" id="sumZoneSub">분석 후 구역 표시</div>
+      <article class="summary-card clock">
+        <div class="small">현재 시각</div>
+        <div class="value" id="sumClock">--:--:--</div>
+        <div class="sub" id="sumClockSub">운영 시간 동기화 중</div>
       </article>
     </section>
 
@@ -1157,7 +1162,7 @@ const mockTrafficRoutes = [
   }
 ];
 
-const sampleRecords = [
+const baseSampleRows = [
   ['VAL-101', '2026-04-03T08:00:00', 37.4469, 126.4469, 31],
   ['VAL-101', '2026-04-03T08:03:00', 37.4473, 126.4475, 18],
   ['VAL-101', '2026-04-03T08:06:00', 37.4476, 126.4481, 8],
@@ -1222,7 +1227,42 @@ const sampleRecords = [
   ['SUS-909', '2026-04-03T08:17:00', 37.4475, 126.4546, 2],
   ['SUS-909', '2026-04-03T08:20:00', 37.4475, 126.4547, 0],
   ['SUS-909', '2026-04-03T08:23:00', 37.4472, 126.4536, 7]
-].map(([vehicleId, timestamp, lat, lng, speed]) => ({
+];
+
+function buildExtendedSuspiciousRows() {
+  const t1Pattern = [
+    [0, 37.4483, 126.4479, 20],
+    [3, 37.4490, 126.4488, 10],
+    [6, 37.4495, 126.4497, 4],
+    [9, 37.4497, 126.4504, 1],
+    [12, 37.4496, 126.4513, 3]
+  ];
+  const t2Pattern = [
+    [0, 37.4469, 126.4530, 18],
+    [3, 37.4472, 126.4538, 7],
+    [6, 37.4474, 126.4545, 2],
+    [9, 37.4474, 126.4549, 0],
+    [12, 37.4471, 126.4537, 5]
+  ];
+
+  return Array.from({ length: 26 }, (_, index) => {
+    const id = `SUS-${640 + index}`;
+    const pattern = index % 2 === 0 ? t1Pattern : t2Pattern;
+    const startMinute = 10 + index;
+    const latShift = (index % 4) * 0.00005;
+    const lngShift = (index % 5) * 0.00004;
+
+    return pattern.map(([offset, lat, lng, speed], pointIndex) => ([
+      id,
+      `2026-04-03T08:${String(startMinute + offset).padStart(2, '0')}:00`,
+      Number((lat + latShift + (pointIndex % 2 === 0 ? 0 : 0.00002)).toFixed(6)),
+      Number((lng + lngShift + (pointIndex >= 3 ? 0.00003 : 0)).toFixed(6)),
+      Math.max(0, speed - (index % 3 === 0 ? 1 : 0))
+    ]));
+  }).flat();
+}
+
+const sampleRecords = [...baseSampleRows, ...buildExtendedSuspiciousRows()].map(([vehicleId, timestamp, lat, lng, speed]) => ({
   vehicleId,
   timestamp,
   lat,
@@ -1336,6 +1376,22 @@ function formatLiveTime(value) {
     minute: '2-digit',
     second: '2-digit',
     hour12: false
+  });
+}
+
+function updateLiveClock() {
+  const now = new Date();
+  document.getElementById('sumClock').textContent = now.toLocaleTimeString('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+  document.getElementById('sumClockSub').textContent = now.toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    weekday: 'short'
   });
 }
 
@@ -1759,35 +1815,32 @@ function updateSummary(analysis) {
     document.getElementById('sumVehicles').textContent = '0';
     document.getElementById('sumRecords').textContent = '0';
     document.getElementById('sumRisks').textContent = '0';
-    document.getElementById('sumZone').textContent = '-';
     document.getElementById('sumVehiclesSub').textContent = '분석 대기 중';
     document.getElementById('sumRecordsSub').textContent = '공식 인계장 진입 차량';
     document.getElementById('sumRisksSub').textContent = '불법 대행 의심 차량';
-    document.getElementById('sumZoneSub').textContent = '비인가 접촉 구역 요약';
     return;
   }
 
   document.getElementById('sumVehicles').textContent = String(analysis.summary.totalVehicles);
   document.getElementById('sumRecords').textContent = String(analysis.summary.totalRecords);
   document.getElementById('sumRisks').textContent = String(analysis.summary.highRiskCount);
-  document.getElementById('sumZone').textContent = analysis.summary.hotspotName;
   document.getElementById('sumVehiclesSub').textContent = '관제 대상 전체 차량';
   document.getElementById('sumRecordsSub').textContent = '공식 인계장 진입 확인 차량';
-  document.getElementById('sumRisksSub').textContent = '의심 점수 65 이상 우선 대응 차량';
-  document.getElementById('sumZoneSub').textContent = analysis.summary.hotspotDetail;
+  document.getElementById('sumRisksSub').textContent = `${analysis.summary.highRiskCount}대 우선 대응 · ${analysis.summary.hotspotName}`;
 }
 
 function renderVehicleList(analysis) {
   const list = document.getElementById('vehicleList');
   const tag = document.getElementById('vehicleCountTag');
-  tag.textContent = analysis ? `${analysis.vehicles.length} vehicles` : '0 vehicles';
+  const displayVehicles = analysis ? analysis.vehicles.filter((vehicle) => vehicle.score >= 65) : [];
+  tag.textContent = `${displayVehicles.length} vehicles`;
 
-  if (!analysis || !analysis.vehicles.length) {
+  if (!displayVehicles.length) {
     list.innerHTML = '<div class="empty-state">표시할 차량이 없습니다.</div>';
     return;
   }
 
-  list.innerHTML = analysis.vehicles.map((vehicle) => `
+  list.innerHTML = displayVehicles.map((vehicle) => `
     <article class="vehicle-card ${vehicle.vehicleId === selectedVehicleId ? 'active' : ''}" data-vehicle-id="${vehicle.vehicleId}">
       <div class="vehicle-head">
         <div>
@@ -2140,7 +2193,7 @@ function selectVehicle(vehicleId) {
 
 function renderAnalysis(analysis) {
   currentAnalysis = analysis;
-  selectedVehicleId = analysis?.vehicles[0]?.vehicleId || null;
+  selectedVehicleId = analysis?.vehicles.find((item) => item.score >= 65)?.vehicleId || analysis?.vehicles[0]?.vehicleId || null;
   updateDatasetMeta(analysis);
   updateSummary(analysis);
   renderVehicleList(analysis);
@@ -2220,6 +2273,8 @@ document.getElementById('fitRouteBtn').addEventListener('click', () => {
   }
 });
 
+updateLiveClock();
+setInterval(updateLiveClock, 1000);
 resetDashboard();
 loadSampleScenario();
 initMockTraffic();
