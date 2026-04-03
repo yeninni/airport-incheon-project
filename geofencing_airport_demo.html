@@ -788,12 +788,12 @@
         </p>
         <input class="file-input" id="fileInput" type="file" accept=".json,.csv">
         <div class="btn-row">
-          <button class="btn primary" id="btnSample">샘플 데이터 분석</button>
-          <button class="btn ghost" id="btnReset">분석 초기화</button>
+          <button class="btn primary" id="btnSample">샘플 동선 불러오기</button>
+          <button class="btn ghost" id="btnReset">샘플로 돌아가기</button>
         </div>
       </div>
       <div class="status-banner" id="statusBanner">
-        샘플 데이터를 불러오면 공식 주차대행 동선과 불법 대행 의심 동선을 바로 비교할 수 있습니다.
+        페이지가 열리면 샘플 의심 차량이 바로 표시되고, 차량을 누르면 동선을 바로 확인할 수 있습니다.
       </div>
     </section>
 
@@ -1192,7 +1192,31 @@ const sampleRecords = [
   ['VAL-205', '2026-04-03T08:11:00', 37.4463, 126.4516, 5],
   ['VAL-205', '2026-04-03T08:14:00', 37.4464, 126.4517, 0],
   ['VAL-205', '2026-04-03T08:17:00', 37.4464, 126.4518, 0],
-  ['VAL-205', '2026-04-03T08:21:00', 37.4461, 126.4512, 8]
+  ['VAL-205', '2026-04-03T08:21:00', 37.4461, 126.4512, 8],
+
+  ['SUS-512', '2026-04-03T08:06:00', 37.4484, 126.4482, 20],
+  ['SUS-512', '2026-04-03T08:09:00', 37.4490, 126.4490, 11],
+  ['SUS-512', '2026-04-03T08:12:00', 37.4494, 126.4498, 4],
+  ['SUS-512', '2026-04-03T08:15:00', 37.4495, 126.4504, 1],
+  ['SUS-512', '2026-04-03T08:18:00', 37.4494, 126.4510, 5],
+
+  ['VAL-318', '2026-04-03T08:07:00', 37.4466, 126.4507, 24],
+  ['VAL-318', '2026-04-03T08:10:00', 37.4464, 126.4513, 10],
+  ['VAL-318', '2026-04-03T08:13:00', 37.4463, 126.4518, 2],
+  ['VAL-318', '2026-04-03T08:16:00', 37.4462, 126.4517, 0],
+  ['VAL-318', '2026-04-03T08:19:00', 37.4465, 126.4511, 9],
+
+  ['OBS-611', '2026-04-03T08:09:00', 37.4479, 126.4481, 17],
+  ['OBS-611', '2026-04-03T08:12:00', 37.4485, 126.4489, 9],
+  ['OBS-611', '2026-04-03T08:15:00', 37.4489, 126.4493, 5],
+  ['OBS-611', '2026-04-03T08:18:00', 37.4483, 126.4486, 12],
+  ['OBS-611', '2026-04-03T08:21:00', 37.4476, 126.4479, 18],
+
+  ['SUS-909', '2026-04-03T08:11:00', 37.4469, 126.4529, 16],
+  ['SUS-909', '2026-04-03T08:14:00', 37.4473, 126.4538, 6],
+  ['SUS-909', '2026-04-03T08:17:00', 37.4475, 126.4546, 2],
+  ['SUS-909', '2026-04-03T08:20:00', 37.4475, 126.4547, 0],
+  ['SUS-909', '2026-04-03T08:23:00', 37.4472, 126.4536, 7]
 ].map(([vehicleId, timestamp, lat, lng, speed]) => ({
   vehicleId,
   timestamp,
@@ -2126,7 +2150,7 @@ function resetDashboard() {
   currentAnalysis = null;
   selectedVehicleId = null;
   renderAnalysis(null);
-  renderStatusBanner('샘플 데이터를 불러오면 합법 주차대행 동선과 비인가 접촉 차량을 바로 비교할 수 있습니다.');
+  renderStatusBanner('샘플 동선을 다시 불러와서 의심 차량을 클릭하면 공식 인계장 진입 여부와 비인가 접촉 동선을 바로 비교할 수 있습니다.');
   document.getElementById('fileInput').value = '';
   clearMapLayers();
   map.setView(AIRPORT_CENTER, 15);
@@ -2137,6 +2161,11 @@ function runAnalysis(records, sourceLabel) {
   const analysis = analyzeRecords(records, sourceLabel);
   renderAnalysis(analysis);
   renderStatusBanner(`${sourceLabel} 분석 완료. 좌측 차량을 선택하면 공식 인계장 진입 여부와 비인가 접촉 동선을 확인할 수 있습니다.`);
+}
+
+function loadSampleScenario() {
+  const normalized = sampleRecords.map(normalizeRecord).filter(Boolean);
+  runAnalysis(normalized, 'sample_illegal_valet_watch.json');
 }
 
 async function handleFileUpload(event) {
@@ -2163,11 +2192,13 @@ async function handleFileUpload(event) {
 }
 
 document.getElementById('btnSample').addEventListener('click', () => {
-  const normalized = sampleRecords.map(normalizeRecord).filter(Boolean);
-  runAnalysis(normalized, 'sample_illegal_valet_watch.json');
+  loadSampleScenario();
 });
 
-document.getElementById('btnReset').addEventListener('click', resetDashboard);
+document.getElementById('btnReset').addEventListener('click', () => {
+  resetDashboard();
+  loadSampleScenario();
+});
 document.getElementById('fileInput').addEventListener('change', handleFileUpload);
 
 document.getElementById('playRouteBtn').addEventListener('click', () => {
@@ -2185,6 +2216,7 @@ document.getElementById('fitRouteBtn').addEventListener('click', () => {
 });
 
 resetDashboard();
+loadSampleScenario();
 initMockTraffic();
 refreshParkingSnapshot();
 parkingRefreshTimer = setInterval(refreshParkingSnapshot, PARKING_REFRESH_MS);
