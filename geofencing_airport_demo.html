@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Incheon AirWatch - 공항 위험 차량 분석 대시보드</title>
+<title>Incheon AirWatch - 불법 주차대행 의심 차량 관제 대시보드</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+KR:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -772,19 +772,19 @@
 <div class="app-shell">
   <aside class="sidebar">
     <div class="brand">
-      <div class="brand-title">Incheon AirWatch</div>
+      <div class="brand-title">Valet Watch ICN</div>
       <div class="brand-sub">
-        공항 차량 이동 데이터를 받아 위험 체류, 반복 진입, 장기 정차 패턴을 분석하는
-        현장 대응용 UI 프로토타입
+        합법 주차대행 인계 구역과 비인가 접촉 구역을 나눠 보고,
+        공식 동선을 따르지 않는 차량을 골라내는 현장 관제용 UI 프로토타입
       </div>
     </div>
 
     <section class="sidebar-card">
-      <div class="label">Data Intake</div>
+      <div class="label">Movement Evidence</div>
       <div class="upload-box">
         <p>
-          CSV 또는 JSON 데이터를 올리면 차량별 이동 경로와 위험 구역 체류 시간을
-          자동으로 계산합니다.
+          CSV 또는 JSON 차량 로그를 올리면 합법 주차대행 인계장 진입 여부와
+          비인가 curbside 체류 패턴을 함께 판정합니다.
         </p>
         <input class="file-input" id="fileInput" type="file" accept=".json,.csv">
         <div class="btn-row">
@@ -793,7 +793,7 @@
         </div>
       </div>
       <div class="status-banner" id="statusBanner">
-        샘플 데이터를 불러오면 곧바로 분석 결과와 지도 경로를 확인할 수 있습니다.
+        샘플 데이터를 불러오면 공식 주차대행 동선과 불법 대행 의심 동선을 바로 비교할 수 있습니다.
       </div>
     </section>
 
@@ -817,7 +817,7 @@
     </section>
 
     <section class="sidebar-card">
-      <div class="label">Dataset</div>
+      <div class="label">Session</div>
       <div class="meta-list">
         <div class="meta-item"><span>현재 소스</span><strong id="metaSource">대기 중</strong></div>
         <div class="meta-item"><span>레코드 수</span><strong id="metaRows">0</strong></div>
@@ -827,21 +827,21 @@
     </section>
 
     <section class="sidebar-card">
-      <div class="label">Input Schema</div>
+      <div class="label">Official Valet</div>
       <div class="schema-list">
-        <div class="schema-item"><code>vehicle_id</code> 차량 식별자</div>
-        <div class="schema-item"><code>timestamp</code> ISO 날짜 또는 시간값</div>
-        <div class="schema-item"><code>lat / lng</code> 위도, 경도</div>
-        <div class="schema-item"><code>speed</code> 속도 km/h</div>
+        <div class="schema-item"><code>T1</code> 단기주차장 지하1층 A구역</div>
+        <div class="schema-item"><code>T2</code> 단기주차장 지하1층 서편</div>
+        <div class="schema-item"><code>rule</code> 공식 인계장 진입 차량은 우선 경보 제외</div>
+        <div class="schema-item"><code>focus</code> 공식 동선을 벗어난 접촉 차량 선별</div>
       </div>
     </section>
 
     <section class="sidebar-card">
-      <div class="label">How To Read</div>
+      <div class="label">Illegal Signal</div>
       <div class="schema-list">
-        <div class="schema-item">위험 점수는 정차 시간, 저속 체류, 반복 진입 횟수를 합산합니다.</div>
-        <div class="schema-item">좌측 리스트에서 차량을 누르면 지도와 상세 카드가 동기화됩니다.</div>
-        <div class="schema-item">재생 버튼은 선택 차량의 경로를 한 점씩 따라가며 보여줍니다.</div>
+        <div class="schema-item">공식 인계장 미진입 상태에서 출국장 curbside 저속 체류가 길수록 점수가 올라갑니다.</div>
+        <div class="schema-item">비인가 접촉 구역 반복 접근, 재진입, 정차 유지 패턴을 우선 감시합니다.</div>
+        <div class="schema-item">좌측 차량을 누르면 지도에서 공식 인계장 도달 여부와 이탈 동선을 같이 볼 수 있습니다.</div>
       </div>
     </section>
   </aside>
@@ -849,8 +849,8 @@
   <main class="main">
     <div class="topbar">
       <div class="topbar-copy">
-        <h1>데이터가 들어오면 바로 분석하는 공항 차량 감시 대시보드</h1>
-        <p>업로드 기반 차량 분석에 인천공항 실시간 주차 혼잡 정보를 함께 보여주는 프로토타입입니다.</p>
+        <h1>합법 주차대행 구역은 통과시키고, 이탈 차량만 골라내는 불법 대행 관제 UI</h1>
+        <p>공식 인계장 진입 여부, 비인가 접촉 구역 체류, 반복 접근 패턴을 한 화면에서 판정합니다.</p>
       </div>
       <div class="pill">
         운영 상태 <strong id="liveStatus">Standby</strong>
@@ -859,22 +859,22 @@
 
     <section class="summary-grid">
       <article class="summary-card">
-        <div class="small">총 차량</div>
+        <div class="small">관제 차량</div>
         <div class="value" id="sumVehicles">0</div>
         <div class="sub" id="sumVehiclesSub">분석 대기 중</div>
       </article>
       <article class="summary-card">
-        <div class="small">총 좌표 로그</div>
+        <div class="small">공식 인계 확인</div>
         <div class="value" id="sumRecords">0</div>
-        <div class="sub" id="sumRecordsSub">데이터 없음</div>
+        <div class="sub" id="sumRecordsSub">공식 인계장 진입 차량</div>
       </article>
       <article class="summary-card alert">
-        <div class="small">고위험 차량</div>
+        <div class="small">불법 대행 의심</div>
         <div class="value" id="sumRisks">0</div>
         <div class="sub" id="sumRisksSub">위험 판단 대기</div>
       </article>
       <article class="summary-card zone">
-        <div class="small">핫스팟 구역</div>
+        <div class="small">집중 감시 구역</div>
         <div class="value" id="sumZone">-</div>
         <div class="sub" id="sumZoneSub">분석 후 구역 표시</div>
       </article>
@@ -885,23 +885,23 @@
         <section class="panel">
           <div class="panel-head">
             <div>
-              <h2>위험 차량 우선순위</h2>
-              <p>점수가 높은 차량부터 현장 대응 순서 제안</p>
+              <h2>불법 주차대행 의심 차량</h2>
+              <p>공식 인계장 미진입 + 비인가 접촉 패턴이 강한 차량부터 정렬</p>
             </div>
             <div class="mini-tag" id="vehicleCountTag">0 vehicles</div>
           </div>
           <div class="vehicle-list" id="vehicleList">
-            <div class="empty-state">샘플 데이터 분석 또는 파일 업로드 후 차량 목록이 표시됩니다.</div>
+            <div class="empty-state">샘플 데이터 분석 또는 파일 업로드 후 의심 차량 목록이 표시됩니다.</div>
           </div>
         </section>
 
         <section class="panel">
           <div class="panel-head">
             <div>
-              <h2>핫스팟 구역 요약</h2>
-              <p>구역별 체류와 진입 횟수를 빠르게 확인</p>
+              <h2>비인가 접촉 구역 요약</h2>
+              <p>공식 인계장 밖에서 접촉이 일어날 수 있는 구역을 우선 감시</p>
             </div>
-            <div class="mini-tag">red-zones</div>
+            <div class="mini-tag">watch-zones</div>
           </div>
           <div class="zone-list" id="zoneList">
             <div class="empty-state">아직 집계된 구역 데이터가 없습니다.</div>
@@ -911,8 +911,8 @@
         <section class="panel">
           <div class="panel-head">
             <div>
-              <h2>운영 제안</h2>
-              <p>분석 결과를 바탕으로 다음 액션 제시</p>
+              <h2>현장 조치 제안</h2>
+              <p>합법 주차대행 흐름을 기준으로 우선 대응을 정리합니다.</p>
             </div>
           </div>
           <div class="recommend-list" id="recommendList">
@@ -925,8 +925,8 @@
         <section class="panel map-card">
           <div class="panel-head">
             <div>
-              <h2>공항 지도와 선택 차량 경로</h2>
-              <p>선택 차량의 이동 경로, 체류 지점, 위험 구역을 같이 표시합니다.</p>
+              <h2>공식 인계장과 비인가 접촉 구역 지도</h2>
+              <p>선택 차량이 합법 주차대행 구역으로 들어갔는지, curbside를 배회했는지 함께 봅니다.</p>
             </div>
             <div class="map-meta">
               <span id="selectedLabel">선택 차량 없음</span>
@@ -940,23 +940,23 @@
         <section class="panel">
           <div class="panel-head">
             <div>
-              <h2>선택 차량 상세</h2>
-              <p>하나의 차량을 기준으로 체류, 진입, 권고 조치를 정리합니다.</p>
+              <h2>선택 차량 판정 상세</h2>
+              <p>공식 인계장 진입 여부와 비인가 접촉 패턴을 기준으로 판정합니다.</p>
             </div>
           </div>
           <div class="detail-body">
             <div class="detail-main">
               <div class="detail-title" id="detailTitle">차량을 선택해 주세요</div>
               <div class="detail-copy" id="detailCopy">
-                좌측 위험 차량 우선순위에서 차량을 클릭하면 상세 분석이 여기에 표시됩니다.
+                좌측 의심 차량 목록에서 차량을 클릭하면 공식 인계장 진입 여부와 이탈 동선이 표시됩니다.
               </div>
               <div class="detail-grid" id="detailGrid">
                 <div class="detail-stat">
-                  <div class="k">최대 체류</div>
+                  <div class="k">비인가 체류</div>
                   <div class="v">-</div>
                 </div>
                 <div class="detail-stat">
-                  <div class="k">진입 횟수</div>
+                  <div class="k">공식 인계</div>
                   <div class="v">-</div>
                 </div>
                 <div class="detail-stat">
@@ -964,14 +964,14 @@
                   <div class="v">-</div>
                 </div>
                 <div class="detail-stat">
-                  <div class="k">위험 점수</div>
+                  <div class="k">의심 점수</div>
                   <div class="v">-</div>
                 </div>
               </div>
             </div>
 
             <div class="detail-actions">
-              <button class="btn primary" id="playRouteBtn" disabled>선택 차량 경로 재생</button>
+              <button class="btn primary" id="playRouteBtn" disabled>선택 차량 동선 재생</button>
               <button class="btn ghost" id="fitRouteBtn" disabled>선택 차량 위치로 확대</button>
               <div class="detail-status" id="detailStatus">
                 샘플 데이터를 먼저 분석해 주세요.
@@ -986,10 +986,10 @@
 
 <script>
 const AIRPORT_CENTER = [37.4490, 126.4510];
-const redZones = [
+const suspiciousZones = [
   {
-    id: 'zone-a',
-    name: 'Zone A - 1터미널 출국장',
+    id: 'watch-t1-curb',
+    name: 'T1 출국장 curbside 접촉 구역',
     color: '#d94960',
     coords: [
       [37.4503, 126.4487],
@@ -999,14 +999,39 @@ const redZones = [
     ]
   },
   {
-    id: 'zone-b',
-    name: 'Zone B - 2터미널 진입로',
+    id: 'watch-t2-curb',
+    name: 'T2 서측 진입 curbside 접촉 구역',
     color: '#c48a14',
     coords: [
       [37.4479, 126.4530],
       [37.4479, 126.4558],
       [37.4467, 126.4558],
       [37.4467, 126.4530]
+    ]
+  }
+];
+
+const officialValetZones = [
+  {
+    id: 'official-t1-a',
+    name: 'T1 공식 주차대행 인계장 - 단기주차장 B1 A구역',
+    color: '#1772cf',
+    coords: [
+      [37.4482, 126.4477],
+      [37.4482, 126.4488],
+      [37.4473, 126.4488],
+      [37.4473, 126.4477]
+    ]
+  },
+  {
+    id: 'official-t2-west',
+    name: 'T2 공식 주차대행 인계장 - 단기주차장 B1 서편',
+    color: '#30a7dd',
+    coords: [
+      [37.4469, 126.4510],
+      [37.4469, 126.4522],
+      [37.4460, 126.4522],
+      [37.4460, 126.4510]
     ]
   }
 ];
@@ -1023,13 +1048,14 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 
 const zoneLayers = [];
-redZones.forEach((zone) => {
+
+function renderZoneLayer(zone, fillOpacity, dashArray, labelPrefix) {
   const polygon = L.polygon(zone.coords, {
     color: zone.color,
     fillColor: zone.color,
-    fillOpacity: 0.14,
+    fillOpacity,
     weight: 2,
-    dashArray: '7 5'
+    dashArray
   }).addTo(map);
 
   const center = polygon.getBounds().getCenter();
@@ -1046,13 +1072,16 @@ redZones.forEach((zone) => {
         font-size:10px;
         white-space:nowrap;
         box-shadow:0 10px 24px rgba(25,77,128,0.12);
-      ">${zone.name}</div>`,
+      ">${labelPrefix} ${zone.name}</div>`,
       iconAnchor: [68, 15]
     })
   }).addTo(map);
 
   zoneLayers.push(polygon);
-});
+}
+
+officialValetZones.forEach((zone) => renderZoneLayer(zone, 0.1, '4 3', 'OFFICIAL'));
+suspiciousZones.forEach((zone) => renderZoneLayer(zone, 0.14, '7 5', 'WATCH'));
 
 L.marker(AIRPORT_CENTER, {
   icon: L.divIcon({
@@ -1076,45 +1105,46 @@ const PARKING_REFRESH_MS = 30000;
 const appConfig = window.AIRWATCH_CONFIG || {};
 
 const sampleRecords = [
-  ['AIR-102', '2026-04-03T08:00:00', 37.4472, 126.4472, 28],
-  ['AIR-102', '2026-04-03T08:03:00', 37.4480, 126.4480, 21],
-  ['AIR-102', '2026-04-03T08:06:00', 37.4493, 126.4492, 7],
-  ['AIR-102', '2026-04-03T08:10:00', 37.4496, 126.4500, 2],
-  ['AIR-102', '2026-04-03T08:14:00', 37.4497, 126.4502, 1],
-  ['AIR-102', '2026-04-03T08:18:00', 37.4497, 126.4502, 0],
-  ['AIR-102', '2026-04-03T08:22:00', 37.4497, 126.4503, 0],
-  ['AIR-102', '2026-04-03T08:26:00', 37.4498, 126.4504, 4],
-  ['AIR-102', '2026-04-03T08:30:00', 37.4500, 126.4515, 12],
-  ['AIR-102', '2026-04-03T08:34:00', 37.4492, 126.4524, 18],
+  ['VAL-101', '2026-04-03T08:00:00', 37.4469, 126.4469, 31],
+  ['VAL-101', '2026-04-03T08:03:00', 37.4473, 126.4475, 18],
+  ['VAL-101', '2026-04-03T08:06:00', 37.4476, 126.4481, 8],
+  ['VAL-101', '2026-04-03T08:08:00', 37.4477, 126.4483, 3],
+  ['VAL-101', '2026-04-03T08:10:00', 37.4478, 126.4484, 0],
+  ['VAL-101', '2026-04-03T08:13:00', 37.4477, 126.4483, 2],
+  ['VAL-101', '2026-04-03T08:16:00', 37.4473, 126.4478, 16],
 
-  ['AIR-445', '2026-04-03T08:04:00', 37.4467, 126.4529, 26],
-  ['AIR-445', '2026-04-03T08:06:00', 37.4472, 126.4532, 12],
-  ['AIR-445', '2026-04-03T08:08:00', 37.4473, 126.4540, 5],
-  ['AIR-445', '2026-04-03T08:10:00', 37.4474, 126.4544, 4],
-  ['AIR-445', '2026-04-03T08:12:00', 37.4474, 126.4546, 1],
-  ['AIR-445', '2026-04-03T08:14:00', 37.4474, 126.4546, 0],
-  ['AIR-445', '2026-04-03T08:16:00', 37.4475, 126.4547, 1],
-  ['AIR-445', '2026-04-03T08:18:00', 37.4478, 126.4551, 8],
-  ['AIR-445', '2026-04-03T08:21:00', 37.4484, 126.4559, 22],
+  ['SUS-118', '2026-04-03T08:02:00', 37.4482, 126.4478, 22],
+  ['SUS-118', '2026-04-03T08:05:00', 37.4491, 126.4488, 12],
+  ['SUS-118', '2026-04-03T08:08:00', 37.4495, 126.4496, 4],
+  ['SUS-118', '2026-04-03T08:11:00', 37.4497, 126.4500, 2],
+  ['SUS-118', '2026-04-03T08:14:00', 37.4497, 126.4501, 0],
+  ['SUS-118', '2026-04-03T08:17:00', 37.4497, 126.4501, 0],
+  ['SUS-118', '2026-04-03T08:21:00', 37.4496, 126.4506, 2],
+  ['SUS-118', '2026-04-03T08:24:00', 37.4492, 126.4516, 7],
+  ['SUS-118', '2026-04-03T08:27:00', 37.4489, 126.4520, 10],
 
-  ['AIR-208', '2026-04-03T08:01:00', 37.4481, 126.4479, 25],
-  ['AIR-208', '2026-04-03T08:04:00', 37.4489, 126.4489, 16],
-  ['AIR-208', '2026-04-03T08:08:00', 37.4494, 126.4494, 7],
-  ['AIR-208', '2026-04-03T08:11:00', 37.4493, 126.4495, 3],
-  ['AIR-208', '2026-04-03T08:13:00', 37.4492, 126.4496, 4],
-  ['AIR-208', '2026-04-03T08:15:00', 37.4491, 126.4522, 18],
-  ['AIR-208', '2026-04-03T08:19:00', 37.4495, 126.4497, 5],
-  ['AIR-208', '2026-04-03T08:22:00', 37.4496, 126.4500, 3],
-  ['AIR-208', '2026-04-03T08:25:00', 37.4497, 126.4501, 2],
-  ['AIR-208', '2026-04-03T08:29:00', 37.4497, 126.4501, 0],
-  ['AIR-208', '2026-04-03T08:32:00', 37.4491, 126.4526, 20],
+  ['OBS-220', '2026-04-03T08:04:00', 37.4478, 126.4480, 24],
+  ['OBS-220', '2026-04-03T08:07:00', 37.4486, 126.4489, 14],
+  ['OBS-220', '2026-04-03T08:10:00', 37.4492, 126.4492, 7],
+  ['OBS-220', '2026-04-03T08:13:00', 37.4492, 126.4494, 2],
+  ['OBS-220', '2026-04-03T08:16:00', 37.4484, 126.4487, 9],
+  ['OBS-220', '2026-04-03T08:20:00', 37.4476, 126.4483, 7],
+  ['OBS-220', '2026-04-03T08:23:00', 37.4477, 126.4484, 2],
 
-  ['AIR-777', '2026-04-03T08:02:00', 37.4460, 126.4468, 34],
-  ['AIR-777', '2026-04-03T08:06:00', 37.4470, 126.4478, 31],
-  ['AIR-777', '2026-04-03T08:10:00', 37.4482, 126.4490, 28],
-  ['AIR-777', '2026-04-03T08:14:00', 37.4488, 126.4500, 22],
-  ['AIR-777', '2026-04-03T08:18:00', 37.4491, 126.4514, 18],
-  ['AIR-777', '2026-04-03T08:22:00', 37.4482, 126.4525, 24]
+  ['SUS-404', '2026-04-03T08:03:00', 37.4468, 126.4526, 18],
+  ['SUS-404', '2026-04-03T08:06:00', 37.4471, 126.4532, 8],
+  ['SUS-404', '2026-04-03T08:09:00', 37.4472, 126.4540, 3],
+  ['SUS-404', '2026-04-03T08:12:00', 37.4473, 126.4545, 1],
+  ['SUS-404', '2026-04-03T08:15:00', 37.4473, 126.4545, 0],
+  ['SUS-404', '2026-04-03T08:18:00', 37.4474, 126.4549, 1],
+  ['SUS-404', '2026-04-03T08:22:00', 37.4477, 126.4552, 6],
+
+  ['VAL-205', '2026-04-03T08:05:00', 37.4456, 126.4503, 26],
+  ['VAL-205', '2026-04-03T08:08:00', 37.4461, 126.4511, 13],
+  ['VAL-205', '2026-04-03T08:11:00', 37.4463, 126.4516, 5],
+  ['VAL-205', '2026-04-03T08:14:00', 37.4464, 126.4517, 0],
+  ['VAL-205', '2026-04-03T08:17:00', 37.4464, 126.4518, 0],
+  ['VAL-205', '2026-04-03T08:21:00', 37.4461, 126.4512, 8]
 ].map(([vehicleId, timestamp, lat, lng, speed]) => ({
   vehicleId,
   timestamp,
@@ -1137,8 +1167,16 @@ function pointInPolygon(lat, lng, polygon) {
   return inside;
 }
 
-function detectZone(lat, lng) {
-  return redZones.find((zone) => pointInPolygon(lat, lng, zone.coords)) || null;
+function detectContainingZone(lat, lng, zones) {
+  return zones.find((zone) => pointInPolygon(lat, lng, zone.coords)) || null;
+}
+
+function detectSuspiciousZone(lat, lng) {
+  return detectContainingZone(lat, lng, suspiciousZones);
+}
+
+function detectOfficialZone(lat, lng) {
+  return detectContainingZone(lat, lng, officialValetZones);
 }
 
 function normalizeRecord(record) {
@@ -1282,15 +1320,15 @@ function renderStatusBanner(message) {
 }
 
 function riskLabel(score) {
-  if (score >= 75) return { text: 'High', className: 'risk-high' };
-  if (score >= 45) return { text: 'Medium', className: 'risk-medium' };
-  return { text: 'Low', className: 'risk-low' };
+  if (score >= 65) return { text: '의심', className: 'risk-high' };
+  if (score >= 35) return { text: '관찰', className: 'risk-medium' };
+  return { text: '정상', className: 'risk-low' };
 }
 
 function analyzeRecords(records, sourceLabel) {
   const sorted = [...records].sort((a, b) => a.timeMs - b.timeMs);
   const grouped = new Map();
-  const zoneStatsMap = new Map(redZones.map((zone) => [zone.id, {
+  const zoneStatsMap = new Map(suspiciousZones.map((zone) => [zone.id, {
     id: zone.id,
     name: zone.name,
     color: zone.color,
@@ -1309,7 +1347,14 @@ function analyzeRecords(records, sourceLabel) {
 
   grouped.forEach((vehicleRecords, vehicleId) => {
     vehicleRecords.sort((a, b) => a.timeMs - b.timeMs);
-    const vehicleZoneMap = new Map(redZones.map((zone) => [zone.id, {
+    const suspiciousZoneMap = new Map(suspiciousZones.map((zone) => [zone.id, {
+      id: zone.id,
+      name: zone.name,
+      hits: 0,
+      entries: 0,
+      dwellMinutes: 0
+    }]));
+    const officialZoneMap = new Map(officialValetZones.map((zone) => [zone.id, {
       id: zone.id,
       name: zone.name,
       hits: 0,
@@ -1317,91 +1362,138 @@ function analyzeRecords(records, sourceLabel) {
       dwellMinutes: 0
     }]));
     let prev = null;
-    let currentEpisode = null;
-    let zoneEntries = 0;
-    let zoneHits = 0;
-    let lowSpeedCount = 0;
-    let insideMinutes = 0;
-    let maxDwell = 0;
+    let suspiciousEpisode = null;
+    let officialEpisode = null;
+    let suspiciousEntries = 0;
+    let suspiciousHits = 0;
+    let officialEntries = 0;
+    let officialHits = 0;
+    let lowSpeedSuspicious = 0;
+    let suspiciousDwell = 0;
+    let officialDwell = 0;
+    let maxSuspiciousDwell = 0;
 
     vehicleRecords.forEach((record) => {
-      const zone = detectZone(record.lat, record.lng);
-      record.zone = zone;
-      if (zone) {
-        zoneHits += 1;
-        zoneStatsMap.get(zone.id).hits += 1;
-        vehicleZoneMap.get(zone.id).hits += 1;
-        if (record.speed <= 5) lowSpeedCount += 1;
+      const suspiciousZone = detectSuspiciousZone(record.lat, record.lng);
+      const officialZone = detectOfficialZone(record.lat, record.lng);
+      record.suspiciousZone = suspiciousZone;
+      record.officialZone = officialZone;
+      if (suspiciousZone) {
+        suspiciousHits += 1;
+        zoneStatsMap.get(suspiciousZone.id).hits += 1;
+        suspiciousZoneMap.get(suspiciousZone.id).hits += 1;
+        if (record.speed <= 5) lowSpeedSuspicious += 1;
+      }
+      if (officialZone) {
+        officialHits += 1;
+        officialZoneMap.get(officialZone.id).hits += 1;
       }
 
-      if (zone && (!prev || !prev.zone || prev.zone.id !== zone.id)) {
-        zoneEntries += 1;
-        zoneStatsMap.get(zone.id).entries += 1;
-        vehicleZoneMap.get(zone.id).entries += 1;
-        currentEpisode = {
-          zone,
+      if (suspiciousZone && (!prev || !prev.suspiciousZone || prev.suspiciousZone.id !== suspiciousZone.id)) {
+        suspiciousEntries += 1;
+        zoneStatsMap.get(suspiciousZone.id).entries += 1;
+        suspiciousZoneMap.get(suspiciousZone.id).entries += 1;
+        suspiciousEpisode = {
+          zone: suspiciousZone,
           start: record.timeMs,
           end: record.timeMs
         };
         incidents.push({
           time: record.timestamp,
           level: 'warn',
-          title: `${vehicleId} ${zone.name} 진입`,
-          body: '위험 구역 진입이 감지되어 체류 시간 추적을 시작했습니다.'
+          title: `${vehicleId} ${suspiciousZone.name} 접근`,
+          body: '공식 인계장 밖 접촉 가능 구역에 진입해 체류 시간을 추적합니다.'
         });
       }
 
-      if (zone && currentEpisode && currentEpisode.zone.id === zone.id) {
-        currentEpisode.end = record.timeMs;
+      if (officialZone && (!prev || !prev.officialZone || prev.officialZone.id !== officialZone.id)) {
+        officialEntries += 1;
+        officialZoneMap.get(officialZone.id).entries += 1;
+        officialEpisode = {
+          zone: officialZone,
+          start: record.timeMs,
+          end: record.timeMs
+        };
+        incidents.push({
+          time: record.timestamp,
+          level: 'info',
+          title: `${vehicleId} 공식 인계장 진입`,
+          body: `${officialZone.name}에 진입했습니다. 정상 주차대행 동선 가능성이 높습니다.`
+        });
+      }
+
+      if (suspiciousZone && suspiciousEpisode && suspiciousEpisode.zone.id === suspiciousZone.id) {
+        suspiciousEpisode.end = record.timeMs;
+      }
+      if (officialZone && officialEpisode && officialEpisode.zone.id === officialZone.id) {
+        officialEpisode.end = record.timeMs;
       }
 
       if (prev) {
         const diffMinutes = minutesBetween(prev.timeMs, record.timeMs);
-        if (prev.zone && zone && prev.zone.id === zone.id) {
-          insideMinutes += diffMinutes;
-          zoneStatsMap.get(zone.id).dwellMinutes += diffMinutes;
-          vehicleZoneMap.get(zone.id).dwellMinutes += diffMinutes;
+        if (prev.suspiciousZone && suspiciousZone && prev.suspiciousZone.id === suspiciousZone.id) {
+          suspiciousDwell += diffMinutes;
+          zoneStatsMap.get(suspiciousZone.id).dwellMinutes += diffMinutes;
+          suspiciousZoneMap.get(suspiciousZone.id).dwellMinutes += diffMinutes;
+        }
+        if (prev.officialZone && officialZone && prev.officialZone.id === officialZone.id) {
+          officialDwell += diffMinutes;
+          officialZoneMap.get(officialZone.id).dwellMinutes += diffMinutes;
         }
       }
 
-      if (prev && prev.zone && (!zone || zone.id !== prev.zone.id) && currentEpisode) {
-        const dwell = minutesBetween(currentEpisode.start, currentEpisode.end);
-        maxDwell = Math.max(maxDwell, dwell);
+      if (prev && prev.suspiciousZone && (!suspiciousZone || suspiciousZone.id !== prev.suspiciousZone.id) && suspiciousEpisode) {
+        const dwell = minutesBetween(suspiciousEpisode.start, suspiciousEpisode.end);
+        maxSuspiciousDwell = Math.max(maxSuspiciousDwell, dwell);
         if (dwell >= 8) {
           incidents.push({
-            time: new Date(currentEpisode.end).toISOString(),
+            time: new Date(suspiciousEpisode.end).toISOString(),
             level: dwell >= 12 ? 'alert' : 'warn',
-            title: `${vehicleId} 장기 체류 감지`,
-            body: `${currentEpisode.zone.name}에서 ${formatMinutes(dwell)} 동안 머문 이력이 있습니다.`
+            title: `${vehicleId} 비인가 체류 감지`,
+            body: `${suspiciousEpisode.zone.name}에서 ${formatMinutes(dwell)} 동안 머문 이력이 있습니다.`
           });
         }
-        currentEpisode = null;
+        suspiciousEpisode = null;
       }
 
       prev = record;
     });
 
-    if (currentEpisode) {
-      const dwell = minutesBetween(currentEpisode.start, currentEpisode.end);
-      maxDwell = Math.max(maxDwell, dwell);
+    if (suspiciousEpisode) {
+      const dwell = minutesBetween(suspiciousEpisode.start, suspiciousEpisode.end);
+      maxSuspiciousDwell = Math.max(maxSuspiciousDwell, dwell);
       if (dwell >= 8) {
         incidents.push({
-          time: new Date(currentEpisode.end).toISOString(),
+          time: new Date(suspiciousEpisode.end).toISOString(),
           level: dwell >= 12 ? 'alert' : 'warn',
-          title: `${vehicleId} 지속 체류 유지`,
-          body: `${currentEpisode.zone.name}에서 ${formatMinutes(dwell)} 이상 체류 중인 패턴입니다.`
+          title: `${vehicleId} 비인가 체류 유지`,
+          body: `${suspiciousEpisode.zone.name}에서 ${formatMinutes(dwell)} 이상 체류 중인 패턴입니다.`
         });
       }
     }
 
     const avgSpeed = vehicleRecords.reduce((sum, item) => sum + item.speed, 0) / vehicleRecords.length;
-    const score = Math.min(99, Math.round(
-      maxDwell * 4.5 +
-      zoneEntries * 12 +
-      lowSpeedCount * 4 +
-      zoneHits * 2 +
-      (avgSpeed < 12 ? 10 : 0)
-    ));
+    let score = Math.round(
+      maxSuspiciousDwell * 5 +
+      suspiciousEntries * 14 +
+      lowSpeedSuspicious * 5 +
+      suspiciousHits * 2 +
+      (officialEntries === 0 && suspiciousEntries > 0 ? 12 : 0) +
+      (avgSpeed < 12 ? 6 : 0) -
+      officialEntries * 20 -
+      Math.min(officialDwell, 10) * 2
+    );
+    score = Math.max(0, Math.min(99, score));
+
+    const primarySuspicious = [...suspiciousZoneMap.values()].sort((a, b) => b.hits - a.hits).find((zone) => zone.hits > 0);
+    const primaryOfficial = [...officialZoneMap.values()].sort((a, b) => b.hits - a.hits).find((zone) => zone.hits > 0);
+    const verdict = officialEntries > 0 && suspiciousEntries === 0
+      ? '공식 인계장 진입'
+      : suspiciousEntries > 0 && officialEntries === 0
+        ? '비인가 접촉 동선'
+        : suspiciousEntries > 0 && officialEntries > 0
+          ? '혼합 동선, 현장 확인'
+          : '통과 차량';
 
     vehicles.push({
       vehicleId,
@@ -1410,14 +1502,15 @@ function analyzeRecords(records, sourceLabel) {
       points: vehicleRecords.map((item) => [item.lat, item.lng]),
       score,
       risk: riskLabel(score),
-      zoneEntries,
-      zoneHits,
-      maxDwell,
+      suspiciousEntries,
+      suspiciousHits,
+      officialEntries,
+      officialHits,
+      maxSuspiciousDwell,
+      officialDwell,
       avgSpeed,
-      insideMinutes,
-      mainZone: [...vehicleZoneMap.values()]
-        .sort((a, b) => b.hits - a.hits)
-        .find((zone) => zone.hits > 0)?.name || '구역 외부 위주',
+      mainZone: primarySuspicious?.name || primaryOfficial?.name || '통과 구간 위주',
+      verdict,
       latestTime: vehicleRecords[vehicleRecords.length - 1].timestamp
     });
   });
@@ -1427,20 +1520,24 @@ function analyzeRecords(records, sourceLabel) {
 
   const zones = [...zoneStatsMap.values()].sort((a, b) => (b.dwellMinutes + b.hits) - (a.dwellMinutes + a.hits));
   const hotspot = zones[0] && zones[0].hits > 0 ? zones[0] : null;
-  const highRiskCount = vehicles.filter((vehicle) => vehicle.score >= 75).length;
+  const suspectedCount = vehicles.filter((vehicle) => vehicle.score >= 65).length;
+  const compliantCount = vehicles.filter((vehicle) => vehicle.officialEntries > 0 && vehicle.suspiciousEntries === 0).length;
 
   const recommendations = [];
   if (vehicles[0]) {
-    recommendations.push(`우선 대응 차량은 ${vehicles[0].vehicleId}입니다. 최대 체류 ${formatMinutes(vehicles[0].maxDwell)}로 현장 확인이 필요합니다.`);
+    recommendations.push(`우선 확인 차량은 ${vehicles[0].vehicleId}입니다. 공식 인계장 미진입 상태에서 ${formatMinutes(vehicles[0].maxSuspiciousDwell)} 체류했습니다.`);
   }
   if (hotspot) {
-    recommendations.push(`${hotspot.name}에서 가장 많은 체류 로그가 발생했습니다. 고정 인력 또는 CCTV 집중 모니터링을 권장합니다.`);
+    recommendations.push(`${hotspot.name}에서 가장 많은 비인가 접촉 로그가 발생했습니다. 현장 안내 인력과 CCTV를 이 구역에 우선 배치하세요.`);
   }
-  if (vehicles.some((vehicle) => vehicle.zoneEntries >= 2)) {
-    recommendations.push('반복 진입 차량이 확인되었습니다. 번호판 기준 재진입 알림 규칙을 추가하는 것이 좋습니다.');
+  if (vehicles.some((vehicle) => vehicle.suspiciousEntries >= 2 && vehicle.officialEntries === 0)) {
+    recommendations.push('공식 인계장에 가지 않으면서 비인가 접촉 구역을 반복 진입한 차량이 있습니다. 번호판 재진입 알림을 강화하세요.');
+  }
+  if (compliantCount > 0) {
+    recommendations.push(`공식 주차대행 인계장이 확인된 차량은 ${compliantCount}대입니다. 이 차량들은 우선 관찰 대상에서 낮춰도 됩니다.`);
   }
   if (!recommendations.length) {
-    recommendations.push('현재 데이터에서는 뚜렷한 장기 체류 패턴이 약합니다. 더 긴 시간대 데이터를 확보해 보세요.');
+    recommendations.push('현재 데이터에서는 뚜렷한 비인가 인계 패턴이 약합니다. 출국장 curbside 인접 로그를 더 확보해 보세요.');
   }
 
   return {
@@ -1452,10 +1549,10 @@ function analyzeRecords(records, sourceLabel) {
     recommendations,
     summary: {
       totalVehicles: vehicles.length,
-      totalRecords: sorted.length,
-      highRiskCount,
+      totalRecords: compliantCount,
+      highRiskCount: suspectedCount,
       hotspotName: hotspot ? hotspot.name : '-',
-      hotspotDetail: hotspot ? `${hotspot.hits}건 로그 / ${Math.round(hotspot.dwellMinutes)}분 체류` : '위험 구역 로그 없음'
+      hotspotDetail: hotspot ? `${hotspot.hits}건 접근 / ${Math.round(hotspot.dwellMinutes)}분 비인가 체류` : '비인가 접촉 로그 없음'
     }
   };
 }
@@ -1474,9 +1571,9 @@ function updateSummary(analysis) {
     document.getElementById('sumRisks').textContent = '0';
     document.getElementById('sumZone').textContent = '-';
     document.getElementById('sumVehiclesSub').textContent = '분석 대기 중';
-    document.getElementById('sumRecordsSub').textContent = '데이터 없음';
-    document.getElementById('sumRisksSub').textContent = '위험 판단 대기';
-    document.getElementById('sumZoneSub').textContent = '분석 후 구역 표시';
+    document.getElementById('sumRecordsSub').textContent = '공식 인계장 진입 차량';
+    document.getElementById('sumRisksSub').textContent = '불법 대행 의심 차량';
+    document.getElementById('sumZoneSub').textContent = '비인가 접촉 구역 요약';
     return;
   }
 
@@ -1484,9 +1581,9 @@ function updateSummary(analysis) {
   document.getElementById('sumRecords').textContent = String(analysis.summary.totalRecords);
   document.getElementById('sumRisks').textContent = String(analysis.summary.highRiskCount);
   document.getElementById('sumZone').textContent = analysis.summary.hotspotName;
-  document.getElementById('sumVehiclesSub').textContent = '분석 대상 차량 수';
-  document.getElementById('sumRecordsSub').textContent = '업로드된 전체 좌표 로그';
-  document.getElementById('sumRisksSub').textContent = '점수 75 이상 우선 대응 차량';
+  document.getElementById('sumVehiclesSub').textContent = '관제 대상 전체 차량';
+  document.getElementById('sumRecordsSub').textContent = '공식 인계장 진입 확인 차량';
+  document.getElementById('sumRisksSub').textContent = '의심 점수 65 이상 우선 대응 차량';
   document.getElementById('sumZoneSub').textContent = analysis.summary.hotspotDetail;
 }
 
@@ -1510,10 +1607,10 @@ function renderVehicleList(analysis) {
         <div class="risk-badge ${vehicle.risk.className}">${vehicle.risk.text} ${vehicle.score}</div>
       </div>
       <div class="vehicle-meta">
-        <div class="metric-chip">최대 체류 ${formatMinutes(vehicle.maxDwell)}</div>
-        <div class="metric-chip">진입 ${vehicle.zoneEntries}회</div>
+        <div class="metric-chip">비인가 체류 ${formatMinutes(vehicle.maxSuspiciousDwell)}</div>
+        <div class="metric-chip">공식 인계 ${vehicle.officialEntries}회</div>
         <div class="metric-chip">평균 속도 ${vehicle.avgSpeed.toFixed(1)}km/h</div>
-        <div class="metric-chip">주요 구역 ${vehicle.mainZone}</div>
+        <div class="metric-chip">판정 ${vehicle.verdict}</div>
       </div>
     </article>
   `).join('');
@@ -1528,7 +1625,7 @@ function renderVehicleList(analysis) {
 function renderZones(analysis) {
   const list = document.getElementById('zoneList');
   if (!analysis || !analysis.zones.some((zone) => zone.hits > 0)) {
-    list.innerHTML = '<div class="empty-state">아직 집계된 구역 데이터가 없습니다.</div>';
+    list.innerHTML = '<div class="empty-state">아직 비인가 접촉 구역 로그가 없습니다.</div>';
     return;
   }
 
@@ -1536,7 +1633,7 @@ function renderZones(analysis) {
     <article class="zone-card">
       <div class="zone-name" style="color:${zone.color}">${zone.name}</div>
       <div class="zone-meta">
-        로그 ${zone.hits}건, 진입 ${zone.entries}회, 누적 체류 ${formatMinutes(zone.dwellMinutes)}
+        접근 ${zone.hits}건, 재진입 ${zone.entries}회, 비인가 체류 ${formatMinutes(zone.dwellMinutes)}
       </div>
     </article>
   `).join('');
@@ -1548,9 +1645,9 @@ function renderRecommendations(analysis) {
 
   if (parkingSnapshot?.summary) {
     const { occupancyRate, hotspot, hotspotRate, congestedZones } = parkingSnapshot.summary;
-    items.unshift(`현재 전체 주차 점유율은 ${formatPercent(occupancyRate)}입니다. ${congestedZones}개 구역이 혼잡 수준이라 우회 안내를 검토할 만합니다.`);
+    items.unshift(`현재 전체 주차 점유율은 ${formatPercent(occupancyRate)}입니다. 공식 인계장 안내가 약하면 curbside 이탈 차량이 늘 수 있어 혼잡 시간대 동선 유도가 중요합니다.`);
     if (hotspot) {
-      items.unshift(`실시간 혼잡 최고 구역은 ${hotspot}이며 점유율은 ${formatPercent(hotspotRate)}입니다. 현장 유도 인력 배치를 우선 검토해 보세요.`);
+      items.unshift(`실시간 혼잡 최고 구역은 ${hotspot}이며 점유율은 ${formatPercent(hotspotRate)}입니다. 합법 주차대행 인계장 방향 표지와 유도 인력 보강을 우선 검토해 보세요.`);
     }
   }
 
@@ -1624,9 +1721,9 @@ async function refreshParkingSnapshot() {
     }
     renderParkingSnapshot(payload);
     if (!currentAnalysis) {
-      renderStatusBanner('실시간 주차 정보를 불러왔습니다.');
+      renderStatusBanner('실시간 주차 정보를 불러왔습니다. 합법 주차대행 인계장 혼잡도와 비인가 접촉 동선을 함께 볼 수 있습니다.');
     } else {
-      renderStatusBanner(`${currentAnalysis.sourceLabel} 분석 완료. 좌측 차량 리스트에서 대상을 선택해 상세 경로를 확인해 보세요.`);
+      renderStatusBanner(`${currentAnalysis.sourceLabel} 분석 완료. 좌측 차량을 선택하면 공식 인계장 진입 여부와 비인가 접촉 동선을 확인할 수 있습니다.`);
     }
   } catch (error) {
     renderParkingSnapshot({
@@ -1636,9 +1733,9 @@ async function refreshParkingSnapshot() {
     document.getElementById('parkingApiState').textContent = '실패';
     document.getElementById('parkingZoneFeed').innerHTML = `<div class="empty-state">실시간 주차 데이터를 불러오지 못했습니다. ${error.message}</div>`;
     if (!currentAnalysis) {
-      renderStatusBanner('샘플 데이터를 불러오면 곧바로 분석 결과와 지도 경로를 확인할 수 있습니다.');
+      renderStatusBanner('샘플 데이터를 불러오면 합법 주차대행 동선과 비인가 접촉 차량을 바로 비교할 수 있습니다.');
     } else {
-      renderStatusBanner(`${currentAnalysis.sourceLabel} 분석 완료. 좌측 차량 리스트에서 대상을 선택해 상세 경로를 확인해 보세요.`);
+      renderStatusBanner(`${currentAnalysis.sourceLabel} 분석 완료. 좌측 차량을 선택하면 공식 인계장 진입 여부와 비인가 접촉 동선을 확인할 수 있습니다.`);
     }
   }
 }
@@ -1650,15 +1747,17 @@ function renderIncidentsForVehicle(vehicle) {
     return;
   }
 
-  const statusLine = vehicle.score >= 75
-    ? '즉시 확인이 필요한 고위험 패턴입니다.'
-    : vehicle.score >= 45
-      ? '현장 모니터링 강화가 필요한 중간 위험 패턴입니다.'
-      : '현재는 저위험 수준으로 보입니다.';
+  const statusLine = vehicle.score >= 65
+    ? '공식 인계장을 거치지 않은 비인가 접촉 패턴으로 즉시 현장 확인이 필요합니다.'
+    : vehicle.score >= 35
+      ? '공식 동선과 이탈 동선이 혼재해 있어 관찰이 필요한 상태입니다.'
+      : vehicle.officialEntries > 0
+        ? '공식 주차대행 인계장 진입이 확인된 정상 흐름입니다.'
+        : '짧은 통과 동선으로 보여 우선 조치 필요도는 낮습니다.';
 
   detailStatus.innerHTML = `
     <strong>${vehicle.vehicleId}</strong><br>
-    위험 구역 진입 ${vehicle.zoneEntries}회, 최대 체류 ${formatMinutes(vehicle.maxDwell)}.<br>
+    비인가 접촉 구역 ${vehicle.suspiciousEntries}회, 공식 인계장 ${vehicle.officialEntries}회.<br>
     ${statusLine}
   `;
 }
@@ -1692,12 +1791,12 @@ function renderVehicleDetail(vehicle) {
 
   if (!vehicle) {
     title.textContent = '차량을 선택해 주세요';
-    copy.textContent = '좌측 위험 차량 우선순위에서 차량을 클릭하면 상세 분석이 여기에 표시됩니다.';
+    copy.textContent = '좌측 의심 차량 목록에서 차량을 클릭하면 공식 인계장 진입 여부와 비인가 접촉 패턴이 여기에 표시됩니다.';
     grid.innerHTML = `
-      <div class="detail-stat"><div class="k">최대 체류</div><div class="v">-</div></div>
-      <div class="detail-stat"><div class="k">진입 횟수</div><div class="v">-</div></div>
+      <div class="detail-stat"><div class="k">비인가 체류</div><div class="v">-</div></div>
+      <div class="detail-stat"><div class="k">공식 인계</div><div class="v">-</div></div>
       <div class="detail-stat"><div class="k">평균 속도</div><div class="v">-</div></div>
-      <div class="detail-stat"><div class="k">위험 점수</div><div class="v">-</div></div>
+      <div class="detail-stat"><div class="k">의심 점수</div><div class="v">-</div></div>
     `;
     playBtn.disabled = true;
     fitBtn.disabled = true;
@@ -1707,13 +1806,13 @@ function renderVehicleDetail(vehicle) {
     return;
   }
 
-  title.textContent = `${vehicle.vehicleId} 분석 상세`;
-  copy.textContent = `${vehicle.mainZone} 중심으로 움직였고, 마지막 로그 시각은 ${formatDateTime(vehicle.latestTime)}입니다.`;
+  title.textContent = `${vehicle.vehicleId} 동선 판정 상세`;
+  copy.textContent = `${vehicle.mainZone} 중심으로 움직였고 판정은 "${vehicle.verdict}"입니다. 마지막 로그 시각은 ${formatDateTime(vehicle.latestTime)}입니다.`;
   grid.innerHTML = `
-    <div class="detail-stat"><div class="k">최대 체류</div><div class="v">${formatMinutes(vehicle.maxDwell)}</div></div>
-    <div class="detail-stat"><div class="k">진입 횟수</div><div class="v">${vehicle.zoneEntries}회</div></div>
+    <div class="detail-stat"><div class="k">비인가 체류</div><div class="v">${formatMinutes(vehicle.maxSuspiciousDwell)}</div></div>
+    <div class="detail-stat"><div class="k">공식 인계</div><div class="v">${vehicle.officialEntries}회</div></div>
     <div class="detail-stat"><div class="k">평균 속도</div><div class="v">${vehicle.avgSpeed.toFixed(1)}km/h</div></div>
-    <div class="detail-stat"><div class="k">위험 점수</div><div class="v">${vehicle.score}</div></div>
+    <div class="detail-stat"><div class="k">의심 점수</div><div class="v">${vehicle.score}</div></div>
   `;
   playBtn.disabled = false;
   fitBtn.disabled = false;
@@ -1726,13 +1825,13 @@ function drawVehicleRoute(vehicle) {
   clearMapLayers();
 
   routeLayer = L.polyline(vehicle.points, {
-    color: vehicle.score >= 75 ? '#d94960' : vehicle.score >= 45 ? '#c48a14' : '#1772cf',
+    color: vehicle.score >= 65 ? '#d94960' : vehicle.score >= 35 ? '#c48a14' : '#1772cf',
     weight: 4,
     opacity: 0.85
   }).addTo(map);
 
   pointLayer = L.layerGroup(vehicle.records.map((record, index) => {
-    const color = record.zone ? record.zone.color : '#1772cf';
+    const color = record.suspiciousZone ? record.suspiciousZone.color : record.officialZone ? record.officialZone.color : '#1772cf';
     return L.circleMarker([record.lat, record.lng], {
       radius: index === vehicle.records.length - 1 ? 7 : 5,
       color,
@@ -1742,7 +1841,7 @@ function drawVehicleRoute(vehicle) {
     }).bindTooltip(`
       <strong>${vehicle.vehicleId}</strong><br>
       ${formatDateTime(record.timestamp)}<br>
-      속도 ${record.speed}km/h${record.zone ? `<br>${record.zone.name}` : ''}
+      속도 ${record.speed}km/h${record.suspiciousZone ? `<br>${record.suspiciousZone.name}` : record.officialZone ? `<br>${record.officialZone.name}` : ''}
     `);
   })).addTo(map);
 
@@ -1820,7 +1919,7 @@ function resetDashboard() {
   currentAnalysis = null;
   selectedVehicleId = null;
   renderAnalysis(null);
-  renderStatusBanner('샘플 데이터를 불러오면 곧바로 분석 결과와 지도 경로를 확인할 수 있습니다.');
+  renderStatusBanner('샘플 데이터를 불러오면 합법 주차대행 동선과 비인가 접촉 차량을 바로 비교할 수 있습니다.');
   document.getElementById('fileInput').value = '';
   clearMapLayers();
   map.setView(AIRPORT_CENTER, 15);
@@ -1830,7 +1929,7 @@ function runAnalysis(records, sourceLabel) {
   currentRecords = records;
   const analysis = analyzeRecords(records, sourceLabel);
   renderAnalysis(analysis);
-  renderStatusBanner(`${sourceLabel} 분석 완료. 좌측 차량 리스트에서 대상을 선택해 상세 경로를 확인해 보세요.`);
+  renderStatusBanner(`${sourceLabel} 분석 완료. 좌측 차량을 선택하면 공식 인계장 진입 여부와 비인가 접촉 동선을 확인할 수 있습니다.`);
 }
 
 async function handleFileUpload(event) {
@@ -1858,7 +1957,7 @@ async function handleFileUpload(event) {
 
 document.getElementById('btnSample').addEventListener('click', () => {
   const normalized = sampleRecords.map(normalizeRecord).filter(Boolean);
-  runAnalysis(normalized, 'sample_airport_movements.json');
+  runAnalysis(normalized, 'sample_illegal_valet_watch.json');
 });
 
 document.getElementById('btnReset').addEventListener('click', resetDashboard);
