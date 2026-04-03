@@ -463,6 +463,17 @@
     overflow-y: auto;
   }
 
+  .vehicle-panel {
+    min-height: 0;
+  }
+
+  .vehicle-panel .vehicle-list {
+    flex: 1;
+    min-height: 0;
+    max-height: 540px;
+    padding-bottom: 18px;
+  }
+
   .vehicle-card {
     border: 1px solid rgba(199, 220, 238, 0.95);
     border-radius: 16px;
@@ -892,7 +903,7 @@
 
     <section class="content-grid">
       <div class="stack">
-        <section class="panel">
+        <section class="panel vehicle-panel">
           <div class="panel-head">
             <div>
               <h2>불법 주차대행 의심 차량</h2>
