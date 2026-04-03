@@ -1,0 +1,1639 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Incheon AirWatch - 공항 위험 차량 분석 대시보드</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+KR:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+  :root {
+    --sky-1: #f6fbff;
+    --sky-2: #e8f3fb;
+    --sky-3: #d6e9f8;
+    --panel: rgba(255, 255, 255, 0.88);
+    --panel-strong: rgba(255, 255, 255, 0.96);
+    --line: #c7dcee;
+    --line-strong: #a9c8e4;
+    --text: #18324d;
+    --text-soft: #5d7693;
+    --text-dim: #8098b2;
+    --blue: #1772cf;
+    --blue-soft: rgba(23, 114, 207, 0.12);
+    --cyan: #30a7dd;
+    --navy: #123b67;
+    --red: #d94960;
+    --red-soft: rgba(217, 73, 96, 0.12);
+    --amber: #c48a14;
+    --amber-soft: rgba(196, 138, 20, 0.14);
+    --green: #16745b;
+    --green-soft: rgba(22, 116, 91, 0.1);
+    --shadow: 0 20px 50px rgba(40, 93, 145, 0.12);
+    --radius-lg: 24px;
+    --radius-md: 18px;
+    --radius-sm: 12px;
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    min-height: 100vh;
+    color: var(--text);
+    font-family: 'Noto Sans KR', sans-serif;
+    background:
+      radial-gradient(circle at top right, rgba(111, 196, 255, 0.26), transparent 24%),
+      radial-gradient(circle at left center, rgba(193, 229, 252, 0.45), transparent 30%),
+      linear-gradient(180deg, #fafdff 0%, var(--sky-1) 28%, var(--sky-2) 100%);
+    overflow: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(120deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.12) 40%, transparent 60%),
+      repeating-linear-gradient(
+        90deg,
+        rgba(23, 114, 207, 0.03) 0,
+        rgba(23, 114, 207, 0.03) 1px,
+        transparent 1px,
+        transparent 100px
+      );
+  }
+
+  button,
+  input,
+  select {
+    font: inherit;
+  }
+
+  .app-shell {
+    height: 100vh;
+    display: grid;
+    grid-template-columns: 330px 1fr;
+  }
+
+  .sidebar {
+    position: relative;
+    z-index: 3;
+    background: rgba(255, 255, 255, 0.78);
+    border-right: 1px solid rgba(169, 200, 228, 0.55);
+    backdrop-filter: blur(18px);
+    padding: 26px 20px 20px;
+    overflow-y: auto;
+    box-shadow: 18px 0 45px rgba(30, 74, 119, 0.08);
+  }
+
+  .brand {
+    margin-bottom: 22px;
+  }
+
+  .brand-title {
+    font-family: 'Bebas Neue', sans-serif;
+    letter-spacing: 3px;
+    font-size: 34px;
+    color: var(--blue);
+    line-height: 1;
+  }
+
+  .brand-sub {
+    margin-top: 6px;
+    color: var(--text-soft);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .sidebar-card {
+    background: var(--panel);
+    border: 1px solid rgba(199, 220, 238, 0.9);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    box-shadow: 0 12px 30px rgba(46, 100, 154, 0.08);
+  }
+
+  .sidebar-card + .sidebar-card {
+    margin-top: 14px;
+  }
+
+  .label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+  }
+
+  .label::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--blue), var(--cyan));
+  }
+
+  .upload-box {
+    border: 1px dashed var(--line-strong);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(233, 244, 252, 0.72));
+  }
+
+  .upload-box p {
+    color: var(--text-soft);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .file-input {
+    width: 100%;
+    margin-top: 14px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 12px;
+    background: #fff;
+    color: var(--text-soft);
+  }
+
+  .btn-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .btn {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.95);
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  }
+
+  .btn:hover {
+    transform: translateY(-1px);
+    border-color: var(--line-strong);
+    box-shadow: 0 12px 22px rgba(42, 90, 140, 0.12);
+  }
+
+  .btn.primary {
+    color: #fff;
+    border-color: #1472d5;
+    background: linear-gradient(135deg, #1875d2, #46b2f2);
+  }
+
+  .btn.ghost {
+    background: linear-gradient(180deg, rgba(246, 251, 255, 0.95), rgba(230, 242, 252, 0.95));
+  }
+
+  .meta-list {
+    display: grid;
+    gap: 10px;
+  }
+
+  .meta-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--text-soft);
+  }
+
+  .meta-item strong {
+    color: var(--text);
+    font-weight: 700;
+  }
+
+  .schema-list {
+    display: grid;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-soft);
+  }
+
+  .schema-item code {
+    display: inline-block;
+    min-width: 88px;
+    color: var(--navy);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+  }
+
+  .status-banner {
+    margin-top: 16px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(23, 114, 207, 0.1), rgba(48, 167, 221, 0.14));
+    color: var(--navy);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .main {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 24px 12px;
+  }
+
+  .topbar-copy h1 {
+    font-size: 28px;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+
+  .topbar-copy p {
+    margin-top: 6px;
+    color: var(--text-soft);
+    font-size: 14px;
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.78);
+    border: 1px solid rgba(169, 200, 228, 0.7);
+    color: var(--text-soft);
+    font-size: 12px;
+    font-weight: 600;
+    backdrop-filter: blur(14px);
+  }
+
+  .pill strong {
+    color: var(--text);
+  }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    padding: 0 24px 18px;
+  }
+
+  .summary-card {
+    background: var(--panel-strong);
+    border: 1px solid rgba(199, 220, 238, 0.95);
+    border-radius: 20px;
+    padding: 16px 18px;
+    box-shadow: var(--shadow);
+  }
+
+  .summary-card .small {
+    font-size: 11px;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+
+  .summary-card .value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 28px;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .summary-card .sub {
+    margin-top: 9px;
+    font-size: 12px;
+    color: var(--text-soft);
+    line-height: 1.5;
+  }
+
+  .summary-card.alert .value {
+    color: var(--red);
+  }
+
+  .summary-card.zone .value {
+    color: var(--blue);
+  }
+
+  .content-grid {
+    min-height: 0;
+    flex: 1;
+    padding: 0 24px 24px;
+    display: grid;
+    grid-template-columns: 390px minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .stack {
+    display: grid;
+    grid-template-rows: minmax(300px, 1.15fr) minmax(190px, 0.8fr) minmax(180px, 0.85fr);
+    gap: 16px;
+    min-height: 0;
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid rgba(199, 220, 238, 0.92);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 20px 12px;
+  }
+
+  .panel-head h2 {
+    font-size: 17px;
+    line-height: 1.3;
+  }
+
+  .panel-head p {
+    color: var(--text-soft);
+    font-size: 12px;
+  }
+
+  .mini-tag {
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: var(--blue-soft);
+    color: var(--blue);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+  }
+
+  .vehicle-list,
+  .incident-list,
+  .zone-list {
+    padding: 0 16px 16px;
+    overflow-y: auto;
+  }
+
+  .vehicle-card {
+    border: 1px solid rgba(199, 220, 238, 0.95);
+    border-radius: 16px;
+    padding: 14px;
+    background: rgba(255, 255, 255, 0.78);
+    cursor: pointer;
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  }
+
+  .vehicle-card + .vehicle-card,
+  .incident-card + .incident-card,
+  .zone-card + .zone-card {
+    margin-top: 10px;
+  }
+
+  .vehicle-card:hover,
+  .vehicle-card.active {
+    transform: translateY(-1px);
+    border-color: var(--line-strong);
+    box-shadow: 0 12px 24px rgba(47, 97, 149, 0.12);
+  }
+
+  .vehicle-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .vehicle-id {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--navy);
+  }
+
+  .risk-badge {
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .risk-high {
+    background: var(--red-soft);
+    color: var(--red);
+  }
+
+  .risk-medium {
+    background: var(--amber-soft);
+    color: var(--amber);
+  }
+
+  .risk-low {
+    background: var(--green-soft);
+    color: var(--green);
+  }
+
+  .vehicle-title {
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .vehicle-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-soft);
+  }
+
+  .metric-chip {
+    border-radius: 12px;
+    background: rgba(233, 243, 252, 0.88);
+    padding: 8px 10px;
+  }
+
+  .incident-card,
+  .zone-card {
+    border: 1px solid rgba(199, 220, 238, 0.95);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.8);
+    padding: 14px;
+  }
+
+  .incident-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+
+  .incident-title,
+  .zone-name {
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .incident-body,
+  .zone-meta {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--text-soft);
+    line-height: 1.6;
+  }
+
+  .recommend-list {
+    padding: 0 16px 16px;
+    display: grid;
+    gap: 10px;
+  }
+
+  .recommend-item {
+    border-radius: 16px;
+    padding: 14px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(230, 241, 250, 0.92));
+    border: 1px solid rgba(199, 220, 238, 0.94);
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text-soft);
+  }
+
+  .recommend-item strong {
+    color: var(--text);
+  }
+
+  .map-layout {
+    min-height: 0;
+    display: grid;
+    grid-template-rows: minmax(380px, 1fr) 230px;
+    gap: 16px;
+  }
+
+  .map-card {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .map-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .map-meta span {
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(233, 243, 252, 0.95);
+    color: var(--text-soft);
+    font-size: 11px;
+  }
+
+  #map {
+    flex: 1;
+    min-height: 320px;
+  }
+
+  .leaflet-container {
+    background: #dceefc !important;
+  }
+
+  .leaflet-tile-pane {
+    filter: brightness(1.06) saturate(0.92) contrast(0.95);
+  }
+
+  .detail-body {
+    padding: 0 20px 20px;
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 16px;
+  }
+
+  .detail-main {
+    display: grid;
+    gap: 10px;
+  }
+
+  .detail-title {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .detail-copy {
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--text-soft);
+  }
+
+  .detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .detail-stat {
+    border-radius: 16px;
+    background: rgba(238, 246, 253, 0.9);
+    padding: 12px;
+  }
+
+  .detail-stat .k {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+
+  .detail-stat .v {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px;
+    color: var(--text);
+  }
+
+  .detail-actions {
+    display: grid;
+    gap: 10px;
+    align-content: start;
+  }
+
+  .detail-status {
+    border-radius: 18px;
+    padding: 14px;
+    background: linear-gradient(135deg, rgba(23, 114, 207, 0.1), rgba(48, 167, 221, 0.16));
+    border: 1px solid rgba(169, 200, 228, 0.95);
+    font-size: 13px;
+    color: var(--text-soft);
+    line-height: 1.7;
+  }
+
+  .detail-status strong {
+    color: var(--text);
+  }
+
+  .empty-state {
+    padding: 20px;
+    color: var(--text-soft);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+
+  @media (max-width: 1400px) {
+    .summary-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .content-grid {
+      grid-template-columns: 360px minmax(0, 1fr);
+    }
+
+    .detail-body {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 1080px) {
+    body {
+      overflow: auto;
+    }
+
+    .app-shell {
+      height: auto;
+      grid-template-columns: 1fr;
+    }
+
+    .sidebar {
+      border-right: 0;
+      border-bottom: 1px solid rgba(169, 200, 228, 0.55);
+      box-shadow: none;
+    }
+
+    .content-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .stack {
+      grid-template-rows: none;
+    }
+
+    .map-layout {
+      grid-template-rows: 430px auto;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .topbar,
+    .summary-grid,
+    .content-grid {
+      padding-left: 14px;
+      padding-right: 14px;
+    }
+
+    .topbar {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .summary-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .btn-row,
+    .detail-grid,
+    .vehicle-meta {
+      grid-template-columns: 1fr;
+    }
+
+    .panel-head,
+    .detail-body {
+      padding-left: 16px;
+      padding-right: 16px;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-title">Incheon AirWatch</div>
+      <div class="brand-sub">
+        공항 차량 이동 데이터를 받아 위험 체류, 반복 진입, 장기 정차 패턴을 분석하는
+        현장 대응용 UI 프로토타입
+      </div>
+    </div>
+
+    <section class="sidebar-card">
+      <div class="label">Data Intake</div>
+      <div class="upload-box">
+        <p>
+          CSV 또는 JSON 데이터를 올리면 차량별 이동 경로와 위험 구역 체류 시간을
+          자동으로 계산합니다.
+        </p>
+        <input class="file-input" id="fileInput" type="file" accept=".json,.csv">
+        <div class="btn-row">
+          <button class="btn primary" id="btnSample">샘플 데이터 분석</button>
+          <button class="btn ghost" id="btnReset">분석 초기화</button>
+        </div>
+      </div>
+      <div class="status-banner" id="statusBanner">
+        샘플 데이터를 불러오면 곧바로 분석 결과와 지도 경로를 확인할 수 있습니다.
+      </div>
+    </section>
+
+    <section class="sidebar-card">
+      <div class="label">Dataset</div>
+      <div class="meta-list">
+        <div class="meta-item"><span>현재 소스</span><strong id="metaSource">대기 중</strong></div>
+        <div class="meta-item"><span>레코드 수</span><strong id="metaRows">0</strong></div>
+        <div class="meta-item"><span>차량 수</span><strong id="metaVehicles">0</strong></div>
+        <div class="meta-item"><span>시간 범위</span><strong id="metaRange">-</strong></div>
+      </div>
+    </section>
+
+    <section class="sidebar-card">
+      <div class="label">Input Schema</div>
+      <div class="schema-list">
+        <div class="schema-item"><code>vehicle_id</code> 차량 식별자</div>
+        <div class="schema-item"><code>timestamp</code> ISO 날짜 또는 시간값</div>
+        <div class="schema-item"><code>lat / lng</code> 위도, 경도</div>
+        <div class="schema-item"><code>speed</code> 속도 km/h</div>
+      </div>
+    </section>
+
+    <section class="sidebar-card">
+      <div class="label">How To Read</div>
+      <div class="schema-list">
+        <div class="schema-item">위험 점수는 정차 시간, 저속 체류, 반복 진입 횟수를 합산합니다.</div>
+        <div class="schema-item">좌측 리스트에서 차량을 누르면 지도와 상세 카드가 동기화됩니다.</div>
+        <div class="schema-item">재생 버튼은 선택 차량의 경로를 한 점씩 따라가며 보여줍니다.</div>
+      </div>
+    </section>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="topbar-copy">
+        <h1>데이터가 들어오면 바로 분석하는 공항 차량 감시 대시보드</h1>
+        <p>시뮬레이션 중심이 아니라 업로드 기반 분석 흐름으로 바꾼 프로토타입입니다.</p>
+      </div>
+      <div class="pill">
+        운영 상태 <strong id="liveStatus">Standby</strong>
+      </div>
+    </div>
+
+    <section class="summary-grid">
+      <article class="summary-card">
+        <div class="small">총 차량</div>
+        <div class="value" id="sumVehicles">0</div>
+        <div class="sub" id="sumVehiclesSub">분석 대기 중</div>
+      </article>
+      <article class="summary-card">
+        <div class="small">총 좌표 로그</div>
+        <div class="value" id="sumRecords">0</div>
+        <div class="sub" id="sumRecordsSub">데이터 없음</div>
+      </article>
+      <article class="summary-card alert">
+        <div class="small">고위험 차량</div>
+        <div class="value" id="sumRisks">0</div>
+        <div class="sub" id="sumRisksSub">위험 판단 대기</div>
+      </article>
+      <article class="summary-card zone">
+        <div class="small">핫스팟 구역</div>
+        <div class="value" id="sumZone">-</div>
+        <div class="sub" id="sumZoneSub">분석 후 구역 표시</div>
+      </article>
+    </section>
+
+    <section class="content-grid">
+      <div class="stack">
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>위험 차량 우선순위</h2>
+              <p>점수가 높은 차량부터 현장 대응 순서 제안</p>
+            </div>
+            <div class="mini-tag" id="vehicleCountTag">0 vehicles</div>
+          </div>
+          <div class="vehicle-list" id="vehicleList">
+            <div class="empty-state">샘플 데이터 분석 또는 파일 업로드 후 차량 목록이 표시됩니다.</div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>핫스팟 구역 요약</h2>
+              <p>구역별 체류와 진입 횟수를 빠르게 확인</p>
+            </div>
+            <div class="mini-tag">red-zones</div>
+          </div>
+          <div class="zone-list" id="zoneList">
+            <div class="empty-state">아직 집계된 구역 데이터가 없습니다.</div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>운영 제안</h2>
+              <p>분석 결과를 바탕으로 다음 액션 제시</p>
+            </div>
+          </div>
+          <div class="recommend-list" id="recommendList">
+            <div class="recommend-item">분석 결과가 없어서 제안도 아직 비어 있습니다.</div>
+          </div>
+        </section>
+      </div>
+
+      <div class="map-layout">
+        <section class="panel map-card">
+          <div class="panel-head">
+            <div>
+              <h2>공항 지도와 선택 차량 경로</h2>
+              <p>선택 차량의 이동 경로, 체류 지점, 위험 구역을 같이 표시합니다.</p>
+            </div>
+            <div class="map-meta">
+              <span id="selectedLabel">선택 차량 없음</span>
+              <span id="playbackLabel">재생 대기</span>
+            </div>
+          </div>
+          <div id="map"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>선택 차량 상세</h2>
+              <p>하나의 차량을 기준으로 체류, 진입, 권고 조치를 정리합니다.</p>
+            </div>
+          </div>
+          <div class="detail-body">
+            <div class="detail-main">
+              <div class="detail-title" id="detailTitle">차량을 선택해 주세요</div>
+              <div class="detail-copy" id="detailCopy">
+                좌측 위험 차량 우선순위에서 차량을 클릭하면 상세 분석이 여기에 표시됩니다.
+              </div>
+              <div class="detail-grid" id="detailGrid">
+                <div class="detail-stat">
+                  <div class="k">최대 체류</div>
+                  <div class="v">-</div>
+                </div>
+                <div class="detail-stat">
+                  <div class="k">진입 횟수</div>
+                  <div class="v">-</div>
+                </div>
+                <div class="detail-stat">
+                  <div class="k">평균 속도</div>
+                  <div class="v">-</div>
+                </div>
+                <div class="detail-stat">
+                  <div class="k">위험 점수</div>
+                  <div class="v">-</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="detail-actions">
+              <button class="btn primary" id="playRouteBtn" disabled>선택 차량 경로 재생</button>
+              <button class="btn ghost" id="fitRouteBtn" disabled>선택 차량 위치로 확대</button>
+              <div class="detail-status" id="detailStatus">
+                샘플 데이터를 먼저 분석해 주세요.
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+const AIRPORT_CENTER = [37.4490, 126.4510];
+const redZones = [
+  {
+    id: 'zone-a',
+    name: 'Zone A - 1터미널 출국장',
+    color: '#d94960',
+    coords: [
+      [37.4503, 126.4487],
+      [37.4503, 126.4521],
+      [37.4491, 126.4521],
+      [37.4491, 126.4487]
+    ]
+  },
+  {
+    id: 'zone-b',
+    name: 'Zone B - 2터미널 진입로',
+    color: '#c48a14',
+    coords: [
+      [37.4479, 126.4530],
+      [37.4479, 126.4558],
+      [37.4467, 126.4558],
+      [37.4467, 126.4530]
+    ]
+  }
+];
+
+const map = L.map('map', {
+  center: AIRPORT_CENTER,
+  zoom: 15,
+  zoomControl: true,
+  attributionControl: false
+});
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19
+}).addTo(map);
+
+const zoneLayers = [];
+redZones.forEach((zone) => {
+  const polygon = L.polygon(zone.coords, {
+    color: zone.color,
+    fillColor: zone.color,
+    fillOpacity: 0.14,
+    weight: 2,
+    dashArray: '7 5'
+  }).addTo(map);
+
+  const center = polygon.getBounds().getCenter();
+  L.marker(center, {
+    icon: L.divIcon({
+      className: '',
+      html: `<div style="
+        padding:4px 10px;
+        border-radius:999px;
+        background:rgba(255,255,255,0.9);
+        border:1px solid ${zone.color};
+        color:${zone.color};
+        font-family:'JetBrains Mono',monospace;
+        font-size:10px;
+        white-space:nowrap;
+        box-shadow:0 10px 24px rgba(25,77,128,0.12);
+      ">${zone.name}</div>`,
+      iconAnchor: [68, 15]
+    })
+  }).addTo(map);
+
+  zoneLayers.push(polygon);
+});
+
+L.marker(AIRPORT_CENTER, {
+  icon: L.divIcon({
+    className: '',
+    html: `<div style="font-size:28px;filter:drop-shadow(0 10px 10px rgba(23,114,207,0.18))">✈️</div>`,
+    iconAnchor: [14, 14]
+  })
+}).addTo(map);
+
+let routeLayer = null;
+let pointLayer = null;
+let movingMarker = null;
+let playbackTimer = null;
+
+let currentRecords = [];
+let currentAnalysis = null;
+let selectedVehicleId = null;
+
+const sampleRecords = [
+  ['AIR-102', '2026-04-03T08:00:00', 37.4472, 126.4472, 28],
+  ['AIR-102', '2026-04-03T08:03:00', 37.4480, 126.4480, 21],
+  ['AIR-102', '2026-04-03T08:06:00', 37.4493, 126.4492, 7],
+  ['AIR-102', '2026-04-03T08:10:00', 37.4496, 126.4500, 2],
+  ['AIR-102', '2026-04-03T08:14:00', 37.4497, 126.4502, 1],
+  ['AIR-102', '2026-04-03T08:18:00', 37.4497, 126.4502, 0],
+  ['AIR-102', '2026-04-03T08:22:00', 37.4497, 126.4503, 0],
+  ['AIR-102', '2026-04-03T08:26:00', 37.4498, 126.4504, 4],
+  ['AIR-102', '2026-04-03T08:30:00', 37.4500, 126.4515, 12],
+  ['AIR-102', '2026-04-03T08:34:00', 37.4492, 126.4524, 18],
+
+  ['AIR-445', '2026-04-03T08:04:00', 37.4467, 126.4529, 26],
+  ['AIR-445', '2026-04-03T08:06:00', 37.4472, 126.4532, 12],
+  ['AIR-445', '2026-04-03T08:08:00', 37.4473, 126.4540, 5],
+  ['AIR-445', '2026-04-03T08:10:00', 37.4474, 126.4544, 4],
+  ['AIR-445', '2026-04-03T08:12:00', 37.4474, 126.4546, 1],
+  ['AIR-445', '2026-04-03T08:14:00', 37.4474, 126.4546, 0],
+  ['AIR-445', '2026-04-03T08:16:00', 37.4475, 126.4547, 1],
+  ['AIR-445', '2026-04-03T08:18:00', 37.4478, 126.4551, 8],
+  ['AIR-445', '2026-04-03T08:21:00', 37.4484, 126.4559, 22],
+
+  ['AIR-208', '2026-04-03T08:01:00', 37.4481, 126.4479, 25],
+  ['AIR-208', '2026-04-03T08:04:00', 37.4489, 126.4489, 16],
+  ['AIR-208', '2026-04-03T08:08:00', 37.4494, 126.4494, 7],
+  ['AIR-208', '2026-04-03T08:11:00', 37.4493, 126.4495, 3],
+  ['AIR-208', '2026-04-03T08:13:00', 37.4492, 126.4496, 4],
+  ['AIR-208', '2026-04-03T08:15:00', 37.4491, 126.4522, 18],
+  ['AIR-208', '2026-04-03T08:19:00', 37.4495, 126.4497, 5],
+  ['AIR-208', '2026-04-03T08:22:00', 37.4496, 126.4500, 3],
+  ['AIR-208', '2026-04-03T08:25:00', 37.4497, 126.4501, 2],
+  ['AIR-208', '2026-04-03T08:29:00', 37.4497, 126.4501, 0],
+  ['AIR-208', '2026-04-03T08:32:00', 37.4491, 126.4526, 20],
+
+  ['AIR-777', '2026-04-03T08:02:00', 37.4460, 126.4468, 34],
+  ['AIR-777', '2026-04-03T08:06:00', 37.4470, 126.4478, 31],
+  ['AIR-777', '2026-04-03T08:10:00', 37.4482, 126.4490, 28],
+  ['AIR-777', '2026-04-03T08:14:00', 37.4488, 126.4500, 22],
+  ['AIR-777', '2026-04-03T08:18:00', 37.4491, 126.4514, 18],
+  ['AIR-777', '2026-04-03T08:22:00', 37.4482, 126.4525, 24]
+].map(([vehicleId, timestamp, lat, lng, speed]) => ({
+  vehicleId,
+  timestamp,
+  lat,
+  lng,
+  speed
+}));
+
+function pointInPolygon(lat, lng, polygon) {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i][0];
+    const yi = polygon[i][1];
+    const xj = polygon[j][0];
+    const yj = polygon[j][1];
+    const intersect = ((yi > lng) !== (yj > lng)) &&
+      (lat < (xj - xi) * (lng - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+function detectZone(lat, lng) {
+  return redZones.find((zone) => pointInPolygon(lat, lng, zone.coords)) || null;
+}
+
+function normalizeRecord(record) {
+  const vehicleId = String(record.vehicleId || record.vehicle_id || record.id || '').trim();
+  const timestampRaw = record.timestamp || record.time || record.datetime;
+  const lat = Number(record.lat ?? record.latitude);
+  const lng = Number(record.lng ?? record.lon ?? record.longitude);
+  const speed = Number(record.speed ?? 0);
+
+  if (!vehicleId || Number.isNaN(lat) || Number.isNaN(lng) || !timestampRaw) {
+    return null;
+  }
+
+  const date = new Date(timestampRaw);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return {
+    vehicleId,
+    timestamp: date.toISOString(),
+    timeMs: date.getTime(),
+    lat,
+    lng,
+    speed: Number.isNaN(speed) ? 0 : speed
+  };
+}
+
+function parseCsv(text) {
+  const lines = text.trim().split(/\r?\n/).filter(Boolean);
+  if (lines.length < 2) return [];
+
+  const headers = lines[0].split(',').map((item) => item.trim());
+  return lines.slice(1).map((line) => {
+    const values = line.split(',').map((item) => item.trim());
+    const row = {};
+    headers.forEach((header, index) => {
+      row[header] = values[index] ?? '';
+    });
+    return row;
+  });
+}
+
+function minutesBetween(a, b) {
+  return Math.max(0, (b - a) / 60000);
+}
+
+function formatMinutes(value) {
+  return `${Math.round(value)}분`;
+}
+
+function formatDateTime(value) {
+  return new Date(value).toLocaleString('ko-KR', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+}
+
+function formatTimeRange(records) {
+  if (!records.length) return '-';
+  const sorted = [...records].sort((a, b) => a.timeMs - b.timeMs);
+  return `${formatDateTime(sorted[0].timestamp)} - ${formatDateTime(sorted[sorted.length - 1].timestamp)}`;
+}
+
+function riskLabel(score) {
+  if (score >= 75) return { text: 'High', className: 'risk-high' };
+  if (score >= 45) return { text: 'Medium', className: 'risk-medium' };
+  return { text: 'Low', className: 'risk-low' };
+}
+
+function analyzeRecords(records, sourceLabel) {
+  const sorted = [...records].sort((a, b) => a.timeMs - b.timeMs);
+  const grouped = new Map();
+  const zoneStatsMap = new Map(redZones.map((zone) => [zone.id, {
+    id: zone.id,
+    name: zone.name,
+    color: zone.color,
+    hits: 0,
+    entries: 0,
+    dwellMinutes: 0
+  }]));
+  const incidents = [];
+
+  sorted.forEach((record) => {
+    if (!grouped.has(record.vehicleId)) grouped.set(record.vehicleId, []);
+    grouped.get(record.vehicleId).push(record);
+  });
+
+  const vehicles = [];
+
+  grouped.forEach((vehicleRecords, vehicleId) => {
+    vehicleRecords.sort((a, b) => a.timeMs - b.timeMs);
+    const vehicleZoneMap = new Map(redZones.map((zone) => [zone.id, {
+      id: zone.id,
+      name: zone.name,
+      hits: 0,
+      entries: 0,
+      dwellMinutes: 0
+    }]));
+    let prev = null;
+    let currentEpisode = null;
+    let zoneEntries = 0;
+    let zoneHits = 0;
+    let lowSpeedCount = 0;
+    let insideMinutes = 0;
+    let maxDwell = 0;
+
+    vehicleRecords.forEach((record) => {
+      const zone = detectZone(record.lat, record.lng);
+      record.zone = zone;
+      if (zone) {
+        zoneHits += 1;
+        zoneStatsMap.get(zone.id).hits += 1;
+        vehicleZoneMap.get(zone.id).hits += 1;
+        if (record.speed <= 5) lowSpeedCount += 1;
+      }
+
+      if (zone && (!prev || !prev.zone || prev.zone.id !== zone.id)) {
+        zoneEntries += 1;
+        zoneStatsMap.get(zone.id).entries += 1;
+        vehicleZoneMap.get(zone.id).entries += 1;
+        currentEpisode = {
+          zone,
+          start: record.timeMs,
+          end: record.timeMs
+        };
+        incidents.push({
+          time: record.timestamp,
+          level: 'warn',
+          title: `${vehicleId} ${zone.name} 진입`,
+          body: '위험 구역 진입이 감지되어 체류 시간 추적을 시작했습니다.'
+        });
+      }
+
+      if (zone && currentEpisode && currentEpisode.zone.id === zone.id) {
+        currentEpisode.end = record.timeMs;
+      }
+
+      if (prev) {
+        const diffMinutes = minutesBetween(prev.timeMs, record.timeMs);
+        if (prev.zone && zone && prev.zone.id === zone.id) {
+          insideMinutes += diffMinutes;
+          zoneStatsMap.get(zone.id).dwellMinutes += diffMinutes;
+          vehicleZoneMap.get(zone.id).dwellMinutes += diffMinutes;
+        }
+      }
+
+      if (prev && prev.zone && (!zone || zone.id !== prev.zone.id) && currentEpisode) {
+        const dwell = minutesBetween(currentEpisode.start, currentEpisode.end);
+        maxDwell = Math.max(maxDwell, dwell);
+        if (dwell >= 8) {
+          incidents.push({
+            time: new Date(currentEpisode.end).toISOString(),
+            level: dwell >= 12 ? 'alert' : 'warn',
+            title: `${vehicleId} 장기 체류 감지`,
+            body: `${currentEpisode.zone.name}에서 ${formatMinutes(dwell)} 동안 머문 이력이 있습니다.`
+          });
+        }
+        currentEpisode = null;
+      }
+
+      prev = record;
+    });
+
+    if (currentEpisode) {
+      const dwell = minutesBetween(currentEpisode.start, currentEpisode.end);
+      maxDwell = Math.max(maxDwell, dwell);
+      if (dwell >= 8) {
+        incidents.push({
+          time: new Date(currentEpisode.end).toISOString(),
+          level: dwell >= 12 ? 'alert' : 'warn',
+          title: `${vehicleId} 지속 체류 유지`,
+          body: `${currentEpisode.zone.name}에서 ${formatMinutes(dwell)} 이상 체류 중인 패턴입니다.`
+        });
+      }
+    }
+
+    const avgSpeed = vehicleRecords.reduce((sum, item) => sum + item.speed, 0) / vehicleRecords.length;
+    const score = Math.min(99, Math.round(
+      maxDwell * 4.5 +
+      zoneEntries * 12 +
+      lowSpeedCount * 4 +
+      zoneHits * 2 +
+      (avgSpeed < 12 ? 10 : 0)
+    ));
+
+    vehicles.push({
+      vehicleId,
+      displayName: `${vehicleId} 차량`,
+      records: vehicleRecords,
+      points: vehicleRecords.map((item) => [item.lat, item.lng]),
+      score,
+      risk: riskLabel(score),
+      zoneEntries,
+      zoneHits,
+      maxDwell,
+      avgSpeed,
+      insideMinutes,
+      mainZone: [...vehicleZoneMap.values()]
+        .sort((a, b) => b.hits - a.hits)
+        .find((zone) => zone.hits > 0)?.name || '구역 외부 위주',
+      latestTime: vehicleRecords[vehicleRecords.length - 1].timestamp
+    });
+  });
+
+  incidents.sort((a, b) => new Date(b.time) - new Date(a.time));
+  vehicles.sort((a, b) => b.score - a.score);
+
+  const zones = [...zoneStatsMap.values()].sort((a, b) => (b.dwellMinutes + b.hits) - (a.dwellMinutes + a.hits));
+  const hotspot = zones[0] && zones[0].hits > 0 ? zones[0] : null;
+  const highRiskCount = vehicles.filter((vehicle) => vehicle.score >= 75).length;
+
+  const recommendations = [];
+  if (vehicles[0]) {
+    recommendations.push(`우선 대응 차량은 ${vehicles[0].vehicleId}입니다. 최대 체류 ${formatMinutes(vehicles[0].maxDwell)}로 현장 확인이 필요합니다.`);
+  }
+  if (hotspot) {
+    recommendations.push(`${hotspot.name}에서 가장 많은 체류 로그가 발생했습니다. 고정 인력 또는 CCTV 집중 모니터링을 권장합니다.`);
+  }
+  if (vehicles.some((vehicle) => vehicle.zoneEntries >= 2)) {
+    recommendations.push('반복 진입 차량이 확인되었습니다. 번호판 기준 재진입 알림 규칙을 추가하는 것이 좋습니다.');
+  }
+  if (!recommendations.length) {
+    recommendations.push('현재 데이터에서는 뚜렷한 장기 체류 패턴이 약합니다. 더 긴 시간대 데이터를 확보해 보세요.');
+  }
+
+  return {
+    sourceLabel,
+    records: sorted,
+    vehicles,
+    incidents,
+    zones,
+    recommendations,
+    summary: {
+      totalVehicles: vehicles.length,
+      totalRecords: sorted.length,
+      highRiskCount,
+      hotspotName: hotspot ? hotspot.name : '-',
+      hotspotDetail: hotspot ? `${hotspot.hits}건 로그 / ${Math.round(hotspot.dwellMinutes)}분 체류` : '위험 구역 로그 없음'
+    }
+  };
+}
+
+function updateDatasetMeta(analysis) {
+  document.getElementById('metaSource').textContent = analysis ? analysis.sourceLabel : '대기 중';
+  document.getElementById('metaRows').textContent = analysis ? String(analysis.summary.totalRecords) : '0';
+  document.getElementById('metaVehicles').textContent = analysis ? String(analysis.summary.totalVehicles) : '0';
+  document.getElementById('metaRange').textContent = analysis ? formatTimeRange(analysis.records) : '-';
+}
+
+function updateSummary(analysis) {
+  if (!analysis) {
+    document.getElementById('sumVehicles').textContent = '0';
+    document.getElementById('sumRecords').textContent = '0';
+    document.getElementById('sumRisks').textContent = '0';
+    document.getElementById('sumZone').textContent = '-';
+    document.getElementById('sumVehiclesSub').textContent = '분석 대기 중';
+    document.getElementById('sumRecordsSub').textContent = '데이터 없음';
+    document.getElementById('sumRisksSub').textContent = '위험 판단 대기';
+    document.getElementById('sumZoneSub').textContent = '분석 후 구역 표시';
+    return;
+  }
+
+  document.getElementById('sumVehicles').textContent = String(analysis.summary.totalVehicles);
+  document.getElementById('sumRecords').textContent = String(analysis.summary.totalRecords);
+  document.getElementById('sumRisks').textContent = String(analysis.summary.highRiskCount);
+  document.getElementById('sumZone').textContent = analysis.summary.hotspotName;
+  document.getElementById('sumVehiclesSub').textContent = '분석 대상 차량 수';
+  document.getElementById('sumRecordsSub').textContent = '업로드된 전체 좌표 로그';
+  document.getElementById('sumRisksSub').textContent = '점수 75 이상 우선 대응 차량';
+  document.getElementById('sumZoneSub').textContent = analysis.summary.hotspotDetail;
+}
+
+function renderVehicleList(analysis) {
+  const list = document.getElementById('vehicleList');
+  const tag = document.getElementById('vehicleCountTag');
+  tag.textContent = analysis ? `${analysis.vehicles.length} vehicles` : '0 vehicles';
+
+  if (!analysis || !analysis.vehicles.length) {
+    list.innerHTML = '<div class="empty-state">표시할 차량이 없습니다.</div>';
+    return;
+  }
+
+  list.innerHTML = analysis.vehicles.map((vehicle) => `
+    <article class="vehicle-card ${vehicle.vehicleId === selectedVehicleId ? 'active' : ''}" data-vehicle-id="${vehicle.vehicleId}">
+      <div class="vehicle-head">
+        <div>
+          <div class="vehicle-id">${vehicle.vehicleId}</div>
+          <div class="vehicle-title">${vehicle.displayName}</div>
+        </div>
+        <div class="risk-badge ${vehicle.risk.className}">${vehicle.risk.text} ${vehicle.score}</div>
+      </div>
+      <div class="vehicle-meta">
+        <div class="metric-chip">최대 체류 ${formatMinutes(vehicle.maxDwell)}</div>
+        <div class="metric-chip">진입 ${vehicle.zoneEntries}회</div>
+        <div class="metric-chip">평균 속도 ${vehicle.avgSpeed.toFixed(1)}km/h</div>
+        <div class="metric-chip">주요 구역 ${vehicle.mainZone}</div>
+      </div>
+    </article>
+  `).join('');
+
+  list.querySelectorAll('.vehicle-card').forEach((card) => {
+    card.addEventListener('click', () => {
+      selectVehicle(card.dataset.vehicleId);
+    });
+  });
+}
+
+function renderZones(analysis) {
+  const list = document.getElementById('zoneList');
+  if (!analysis || !analysis.zones.some((zone) => zone.hits > 0)) {
+    list.innerHTML = '<div class="empty-state">아직 집계된 구역 데이터가 없습니다.</div>';
+    return;
+  }
+
+  list.innerHTML = analysis.zones.filter((zone) => zone.hits > 0).map((zone) => `
+    <article class="zone-card">
+      <div class="zone-name" style="color:${zone.color}">${zone.name}</div>
+      <div class="zone-meta">
+        로그 ${zone.hits}건, 진입 ${zone.entries}회, 누적 체류 ${formatMinutes(zone.dwellMinutes)}
+      </div>
+    </article>
+  `).join('');
+}
+
+function renderRecommendations(analysis) {
+  const container = document.getElementById('recommendList');
+  if (!analysis || !analysis.recommendations.length) {
+    container.innerHTML = '<div class="recommend-item">분석 결과가 없어서 제안도 아직 비어 있습니다.</div>';
+    return;
+  }
+
+  container.innerHTML = analysis.recommendations.map((item, index) => `
+    <div class="recommend-item"><strong>제안 ${index + 1}.</strong> ${item}</div>
+  `).join('');
+}
+
+function renderIncidentsForVehicle(vehicle) {
+  const detailStatus = document.getElementById('detailStatus');
+  if (!vehicle) {
+    detailStatus.innerHTML = '샘플 데이터를 먼저 분석해 주세요.';
+    return;
+  }
+
+  const statusLine = vehicle.score >= 75
+    ? '즉시 확인이 필요한 고위험 패턴입니다.'
+    : vehicle.score >= 45
+      ? '현장 모니터링 강화가 필요한 중간 위험 패턴입니다.'
+      : '현재는 저위험 수준으로 보입니다.';
+
+  detailStatus.innerHTML = `
+    <strong>${vehicle.vehicleId}</strong><br>
+    위험 구역 진입 ${vehicle.zoneEntries}회, 최대 체류 ${formatMinutes(vehicle.maxDwell)}.<br>
+    ${statusLine}
+  `;
+}
+
+function clearMapLayers() {
+  if (routeLayer) {
+    map.removeLayer(routeLayer);
+    routeLayer = null;
+  }
+  if (pointLayer) {
+    map.removeLayer(pointLayer);
+    pointLayer = null;
+  }
+  if (movingMarker) {
+    map.removeLayer(movingMarker);
+    movingMarker = null;
+  }
+  if (playbackTimer) {
+    clearInterval(playbackTimer);
+    playbackTimer = null;
+  }
+  document.getElementById('playbackLabel').textContent = '재생 대기';
+}
+
+function renderVehicleDetail(vehicle) {
+  const title = document.getElementById('detailTitle');
+  const copy = document.getElementById('detailCopy');
+  const grid = document.getElementById('detailGrid');
+  const playBtn = document.getElementById('playRouteBtn');
+  const fitBtn = document.getElementById('fitRouteBtn');
+
+  if (!vehicle) {
+    title.textContent = '차량을 선택해 주세요';
+    copy.textContent = '좌측 위험 차량 우선순위에서 차량을 클릭하면 상세 분석이 여기에 표시됩니다.';
+    grid.innerHTML = `
+      <div class="detail-stat"><div class="k">최대 체류</div><div class="v">-</div></div>
+      <div class="detail-stat"><div class="k">진입 횟수</div><div class="v">-</div></div>
+      <div class="detail-stat"><div class="k">평균 속도</div><div class="v">-</div></div>
+      <div class="detail-stat"><div class="k">위험 점수</div><div class="v">-</div></div>
+    `;
+    playBtn.disabled = true;
+    fitBtn.disabled = true;
+    document.getElementById('selectedLabel').textContent = '선택 차량 없음';
+    renderIncidentsForVehicle(null);
+    clearMapLayers();
+    return;
+  }
+
+  title.textContent = `${vehicle.vehicleId} 분석 상세`;
+  copy.textContent = `${vehicle.mainZone} 중심으로 움직였고, 마지막 로그 시각은 ${formatDateTime(vehicle.latestTime)}입니다.`;
+  grid.innerHTML = `
+    <div class="detail-stat"><div class="k">최대 체류</div><div class="v">${formatMinutes(vehicle.maxDwell)}</div></div>
+    <div class="detail-stat"><div class="k">진입 횟수</div><div class="v">${vehicle.zoneEntries}회</div></div>
+    <div class="detail-stat"><div class="k">평균 속도</div><div class="v">${vehicle.avgSpeed.toFixed(1)}km/h</div></div>
+    <div class="detail-stat"><div class="k">위험 점수</div><div class="v">${vehicle.score}</div></div>
+  `;
+  playBtn.disabled = false;
+  fitBtn.disabled = false;
+  document.getElementById('selectedLabel').textContent = `${vehicle.vehicleId} 선택됨`;
+  renderIncidentsForVehicle(vehicle);
+  drawVehicleRoute(vehicle);
+}
+
+function drawVehicleRoute(vehicle) {
+  clearMapLayers();
+
+  routeLayer = L.polyline(vehicle.points, {
+    color: vehicle.score >= 75 ? '#d94960' : vehicle.score >= 45 ? '#c48a14' : '#1772cf',
+    weight: 4,
+    opacity: 0.85
+  }).addTo(map);
+
+  pointLayer = L.layerGroup(vehicle.records.map((record, index) => {
+    const color = record.zone ? record.zone.color : '#1772cf';
+    return L.circleMarker([record.lat, record.lng], {
+      radius: index === vehicle.records.length - 1 ? 7 : 5,
+      color,
+      fillColor: color,
+      fillOpacity: 0.75,
+      weight: 2
+    }).bindTooltip(`
+      <strong>${vehicle.vehicleId}</strong><br>
+      ${formatDateTime(record.timestamp)}<br>
+      속도 ${record.speed}km/h${record.zone ? `<br>${record.zone.name}` : ''}
+    `);
+  })).addTo(map);
+
+  const bounds = routeLayer.getBounds();
+  if (bounds.isValid()) {
+    map.fitBounds(bounds.pad(0.25));
+  }
+}
+
+function playVehicleRoute(vehicle) {
+  if (!vehicle || !vehicle.records.length) return;
+  clearMapLayers();
+  drawVehicleRoute(vehicle);
+
+  if (movingMarker) {
+    map.removeLayer(movingMarker);
+  }
+
+  let index = 0;
+  movingMarker = L.marker([vehicle.records[0].lat, vehicle.records[0].lng], {
+    icon: L.divIcon({
+      className: '',
+      html: `<div style="
+        width:28px;
+        height:28px;
+        border-radius:50%;
+        background:linear-gradient(135deg,#1772cf,#46b2f2);
+        border:3px solid #fff;
+        box-shadow:0 10px 22px rgba(30,87,137,0.2);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-size:13px;
+      ">🚗</div>`,
+      iconSize: [28, 28],
+      iconAnchor: [14, 14]
+    })
+  }).addTo(map);
+
+  document.getElementById('playbackLabel').textContent = '경로 재생 중';
+  playbackTimer = setInterval(() => {
+    index += 1;
+    if (index >= vehicle.records.length) {
+      clearInterval(playbackTimer);
+      playbackTimer = null;
+      document.getElementById('playbackLabel').textContent = '재생 완료';
+      return;
+    }
+    const point = vehicle.records[index];
+    movingMarker.setLatLng([point.lat, point.lng]);
+  }, 700);
+}
+
+function selectVehicle(vehicleId) {
+  selectedVehicleId = vehicleId;
+  renderVehicleList(currentAnalysis);
+  const vehicle = currentAnalysis?.vehicles.find((item) => item.vehicleId === vehicleId) || null;
+  renderVehicleDetail(vehicle);
+}
+
+function renderAnalysis(analysis) {
+  currentAnalysis = analysis;
+  selectedVehicleId = analysis?.vehicles[0]?.vehicleId || null;
+  updateDatasetMeta(analysis);
+  updateSummary(analysis);
+  renderVehicleList(analysis);
+  renderZones(analysis);
+  renderRecommendations(analysis);
+  renderVehicleDetail(selectedVehicleId ? analysis.vehicles.find((item) => item.vehicleId === selectedVehicleId) : null);
+  document.getElementById('liveStatus').textContent = analysis ? 'Analyzed' : 'Standby';
+}
+
+function resetDashboard() {
+  currentRecords = [];
+  currentAnalysis = null;
+  selectedVehicleId = null;
+  renderAnalysis(null);
+  document.getElementById('statusBanner').textContent = '샘플 데이터를 불러오면 곧바로 분석 결과와 지도 경로를 확인할 수 있습니다.';
+  document.getElementById('fileInput').value = '';
+  clearMapLayers();
+  map.setView(AIRPORT_CENTER, 15);
+}
+
+function runAnalysis(records, sourceLabel) {
+  currentRecords = records;
+  const analysis = analyzeRecords(records, sourceLabel);
+  renderAnalysis(analysis);
+  document.getElementById('statusBanner').textContent = `${sourceLabel} 분석 완료. 좌측 차량 리스트에서 대상을 선택해 상세 경로를 확인해 보세요.`;
+}
+
+async function handleFileUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const text = await file.text();
+  let rows = [];
+
+  if (file.name.toLowerCase().endsWith('.json')) {
+    const parsed = JSON.parse(text);
+    rows = Array.isArray(parsed) ? parsed : parsed.data || [];
+  } else {
+    rows = parseCsv(text);
+  }
+
+  const normalized = rows.map(normalizeRecord).filter(Boolean);
+  if (!normalized.length) {
+    document.getElementById('statusBanner').textContent = '유효한 레코드를 읽지 못했습니다. vehicle_id, timestamp, lat, lng 형식을 확인해 주세요.';
+    return;
+  }
+
+  runAnalysis(normalized, file.name);
+}
+
+document.getElementById('btnSample').addEventListener('click', () => {
+  const normalized = sampleRecords.map(normalizeRecord).filter(Boolean);
+  runAnalysis(normalized, 'sample_airport_movements.json');
+});
+
+document.getElementById('btnReset').addEventListener('click', resetDashboard);
+document.getElementById('fileInput').addEventListener('change', handleFileUpload);
+
+document.getElementById('playRouteBtn').addEventListener('click', () => {
+  const vehicle = currentAnalysis?.vehicles.find((item) => item.vehicleId === selectedVehicleId);
+  if (vehicle) playVehicleRoute(vehicle);
+});
+
+document.getElementById('fitRouteBtn').addEventListener('click', () => {
+  const vehicle = currentAnalysis?.vehicles.find((item) => item.vehicleId === selectedVehicleId);
+  if (vehicle && routeLayer) {
+    map.fitBounds(routeLayer.getBounds().pad(0.25));
+  } else if (vehicle) {
+    drawVehicleRoute(vehicle);
+  }
+});
+
+resetDashboard();
+</script>
+</body>
+</html>
