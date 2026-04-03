@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: airport-incheon-api
+    runtime: python
+    plan: free
+    buildCommand: ""
+    startCommand: python3 server.py
+    autoDeploy: true
+    envVars:
+      - key: AIRPORT_API_KEY
+        sync: false
+      - key: PARKING_CACHE_SECONDS
+        value: 30
