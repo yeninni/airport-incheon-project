@@ -52,7 +52,8 @@
       radial-gradient(circle at top right, rgba(111, 196, 255, 0.26), transparent 24%),
       radial-gradient(circle at left center, rgba(193, 229, 252, 0.45), transparent 30%),
       linear-gradient(180deg, #fafdff 0%, var(--sky-1) 28%, var(--sky-2) 100%);
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
 
   body::before {
@@ -78,9 +79,11 @@
   }
 
   .app-shell {
-    height: 100vh;
+    min-height: 100vh;
+    height: auto;
     display: grid;
     grid-template-columns: 330px 1fr;
+    align-items: start;
   }
 
   .sidebar {
@@ -304,9 +307,10 @@
 
   .main {
     position: relative;
-    overflow: hidden;
+    overflow: visible;
     display: flex;
     flex-direction: column;
+    min-height: 100vh;
   }
 
   .topbar {
@@ -393,19 +397,20 @@
   }
 
   .content-grid {
-    min-height: 0;
-    flex: 1;
+    min-height: auto;
+    flex: 0 0 auto;
     padding: 0 24px 24px;
     display: grid;
     grid-template-columns: 390px minmax(0, 1fr);
     gap: 16px;
+    align-items: start;
   }
 
   .stack {
     display: grid;
-    grid-template-rows: minmax(300px, 1.15fr) minmax(190px, 0.8fr) minmax(180px, 0.85fr);
+    grid-template-rows: minmax(320px, auto) minmax(220px, auto) minmax(210px, auto);
     gap: 16px;
-    min-height: 0;
+    min-height: auto;
   }
 
   .panel {
@@ -413,10 +418,10 @@
     border: 1px solid rgba(199, 220, 238, 0.92);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow);
-    min-height: 0;
+    min-height: auto;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .panel-head {
@@ -580,14 +585,14 @@
   }
 
   .map-layout {
-    min-height: 0;
+    min-height: auto;
     display: grid;
-    grid-template-rows: minmax(380px, 1fr) 230px;
+    grid-template-rows: minmax(430px, auto) minmax(280px, auto);
     gap: 16px;
   }
 
   .map-card {
-    min-height: 0;
+    min-height: auto;
     overflow: hidden;
   }
 
@@ -608,7 +613,7 @@
 
   #map {
     flex: 1;
-    min-height: 320px;
+    min-height: 420px;
   }
 
   .leaflet-container {
